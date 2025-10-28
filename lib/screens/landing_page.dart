@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter/foundation.dart';
 import '../utils/asset_utils.dart';
 import 'login_page.dart';
 
@@ -14,6 +15,7 @@ class _LandingPageState extends State<LandingPage> {
   bool _hasBg = false;
   bool _hasLogo = false;
   bool _hasBgSvg = false;
+  bool _hasBgPng = false;
 
   @override
   void initState() {
@@ -23,11 +25,13 @@ class _LandingPageState extends State<LandingPage> {
 
   Future<void> _initAssets() async {
     // final bgJpg = await assetExists('assets/images/landing_bg.jpg'); // no usar JPG
+    final bgPng = await assetExists('assets/images/landing_bg.png');
     final bgSvg = await assetExists('assets/images/landing_bg.svg');
     final logo = await assetExists('assets/logo/logo.svg');
     if (mounted) {
       setState(() {
-        _hasBg = false; // forzar a no cargar JPG para evitar 404 en web
+        _hasBg = false; // no usar JPG
+        _hasBgPng = bgPng;
         _hasBgSvg = bgSvg;
         _hasLogo = logo;
       });
@@ -40,12 +44,17 @@ class _LandingPageState extends State<LandingPage> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: _hasBgSvg
-                ? SvgPicture.asset(
-                    'assets/images/landing_bg.svg',
+            child: (_hasBgPng
+                ? Image.asset(
+                    'assets/images/landing_bg.png',
                     fit: BoxFit.cover,
                   )
-                : Container(color: Colors.black),
+                : (_hasBgSvg
+                    ? SvgPicture.asset(
+                        'assets/images/landing_bg.svg',
+                        fit: BoxFit.cover,
+                      )
+                    : Container(color: Colors.black))),
           ),
           Positioned.fill(
             child: Container(
@@ -82,7 +91,7 @@ class _LandingPageState extends State<LandingPage> {
                   ),
                   const Spacer(),
                   const Text(
-                    'Explora.',
+                    'Watsolution',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 42,
@@ -91,26 +100,17 @@ class _LandingPageState extends State<LandingPage> {
                     ),
                   ),
                   const Text(
-                    'Viaja.',
+                    'Cada gota cuenta. ',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 42,
-                      fontWeight: FontWeight.w800,
-                      height: 1.1,
-                    ),
-                  ),
-                  const Text(
-                    'Inspira.',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 42,
+                      fontSize: 32,
                       fontWeight: FontWeight.w800,
                       height: 1.1,
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'La vida es un viaje. Encuentra el tuyo.',
+                    'Aplicacion para la toma de consumos',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.85),
                       fontSize: 14,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'home_page.dart';
+import '../config/supabase_config.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -28,14 +29,29 @@ class _LoginPageState extends State<LoginPage> {
       final password = _passwordController.text;
       if (email.isEmpty || password.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ingresa correo y contraseña')), 
+          const SnackBar(content: Text('Ingresa correo y contraseña')),
         );
         return;
       }
-      await Supabase.instance.client.auth.signInWithPassword(
+
+      // Inicializa una sola vez y valida que la anon key coincide con el URL
+      await initSupabase();
+      if (!supabaseKeyMatchesUrl()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('La API key no corresponde al proyecto (URL). Revisa .env.')),
+        );
+        return;
+      }
+
+      final res = await Supabase.instance.client.auth.signInWithPassword(
         email: email,
         password: password,
       );
+
+      if (res.session == null) {
+        throw const AuthException('No se pudo iniciar sesión');
+      }
+
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomePage()),
@@ -48,37 +64,6 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error inesperado al iniciar sesión')),
-      );
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _signUp() async {
-    setState(() => _loading = true);
-    try {
-      final email = _emailController.text.trim();
-      final password = _passwordController.text;
-      if (email.isEmpty || password.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ingresa correo y contraseña')), 
-        );
-        return;
-      }
-      await Supabase.instance.client.auth.signUp(
-        email: email,
-        password: password,
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registro exitoso. Revisa tu correo.')),
-      );
-    } on AuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
-    } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error inesperado al registrarte')),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -127,10 +112,7 @@ class _LoginPageState extends State<LoginPage> {
                       : const Text('Entrar'),
                 ),
                 const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: _loading ? null : _signUp,
-                  child: const Text('Crear cuenta'),
-                ),
+                // Se elimina totalmente la opción de "Crear cuenta"
               ],
             ),
           ),
