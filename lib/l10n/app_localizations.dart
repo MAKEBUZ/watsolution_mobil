@@ -19,6 +19,9 @@ class AppLocalizations {
       'toggleTheme': 'Cambiar tema (Claro/Oscuro)',
       'languageSpanish': 'Español',
       'languageEnglish': 'Inglés',
+      'homeScanQR': 'Escanear QR',
+      'homeUsers': 'Usuarios',
+      'homeHistory': 'Historial de Mediciones',
       // Login
       'loginTitle': 'Iniciar sesión',
       'loginEmail': 'Correo',
@@ -44,6 +47,9 @@ class AppLocalizations {
       'toggleTheme': 'Toggle theme (Light/Dark)',
       'languageSpanish': 'Spanish',
       'languageEnglish': 'English',
+      'homeScanQR': 'Scan QR',
+      'homeUsers': 'Users',
+      'homeHistory': 'Measurement History',
       // Login
       'loginTitle': 'Sign in',
       'loginEmail': 'Email',
@@ -76,6 +82,9 @@ class AppLocalizations {
   String get toggleTheme => _get('toggleTheme');
   String get languageSpanish => _get('languageSpanish');
   String get languageEnglish => _get('languageEnglish');
+  String get homeScanQR => _get('homeScanQR');
+  String get homeUsers => _get('homeUsers');
+  String get homeHistory => _get('homeHistory');
   // Login
   String get loginTitle => _get('loginTitle');
   String get loginEmail => _get('loginEmail');
