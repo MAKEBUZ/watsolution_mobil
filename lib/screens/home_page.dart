@@ -264,7 +264,7 @@ class _HistoryItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Medición #${DateTime.now().millisecondsSinceEpoch % 10000}',
+                  AppLocalizations.of(context).measurement + ' #' + (DateTime.now().millisecondsSinceEpoch % 10000).toString(),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: cs.onSurface,
                         fontWeight: FontWeight.w600,
