@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/landing_page.dart';
 import 'screens/home_page.dart';
@@ -12,6 +13,9 @@ class AppState extends ChangeNotifier {
   void setThemeMode(ThemeMode mode) {
     if (themeMode != mode) {
       themeMode = mode;
+      // Persist selection using Hive
+      final box = Hive.box('app');
+      box.put('themeMode', themeMode == ThemeMode.dark ? 'dark' : 'light');
       notifyListeners();
     }
   }
@@ -23,6 +27,9 @@ class AppState extends ChangeNotifier {
   void setLocale(Locale newLocale) {
     if (locale != newLocale) {
       locale = newLocale;
+      // Persist selection using Hive
+      final box = Hive.box('app');
+      box.put('localeCode', newLocale.languageCode);
       notifyListeners();
     }
   }
