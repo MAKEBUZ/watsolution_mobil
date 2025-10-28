@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/asset_utils.dart';
 import 'login_page.dart';
+import '../l10n/app_localizations.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -90,18 +91,18 @@ class _LandingPageState extends State<LandingPage> {
                     ],
                   ),
                   const Spacer(),
-                  const Text(
-                    'Watsolution',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context).landingHeadline1,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 42,
                       fontWeight: FontWeight.w800,
                       height: 1.1,
                     ),
                   ),
-                  const Text(
-                    'Cada gota cuenta. ',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context).landingHeadline2,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 32,
                       fontWeight: FontWeight.w800,
@@ -110,7 +111,7 @@ class _LandingPageState extends State<LandingPage> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Aplicacion para la toma de consumos',
+                    AppLocalizations.of(context).landingDescription,
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.85),
                       fontSize: 14,
@@ -122,8 +123,8 @@ class _LandingPageState extends State<LandingPage> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         elevation: 3,
                         padding: const EdgeInsets.symmetric(
                             vertical: 16, horizontal: 24),
@@ -134,21 +135,22 @@ class _LandingPageState extends State<LandingPage> {
                           MaterialPageRoute(builder: (_) => LoginPage()),
                         );
                       },
-                      child: const Row(
+                      // Reemplazar Row malformado por uno correcto sin const
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Iniciar sesión'),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_right_alt),
+                          Text(AppLocalizations.of(context).landingSignInButton),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_right_alt),
                         ],
                       ),
-                    ),
-                  ),
+                     ),
+                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Usa tu cuenta para comenzar',
-                    style: TextStyle(color: Colors.white70),
+                  Text(
+                    AppLocalizations.of(context).landingUseYourAccount,
+                    style: const TextStyle(color: Colors.white70),
                   ),
                   const Spacer(),
                 ],

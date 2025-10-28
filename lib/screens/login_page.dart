@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'home_page.dart';
 import '../config/supabase_config.dart';
+import '../l10n/app_localizations.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -29,7 +30,7 @@ class _LoginPageState extends State<LoginPage> {
       final password = _passwordController.text;
       if (email.isEmpty || password.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ingresa correo y contraseña')),
+          SnackBar(content: Text(AppLocalizations.of(context).loginEnterEmailPassword)),
         );
         return;
       }
@@ -38,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
       await initSupabase();
       if (!supabaseKeyMatchesUrl()) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('La API key no corresponde al proyecto (URL). Revisa .env.')),
+          SnackBar(content: Text(AppLocalizations.of(context).loginApiKeyMismatch)),
         );
         return;
       }
@@ -49,7 +50,7 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (res.session == null) {
-        throw const AuthException('No se pudo iniciar sesión');
+        throw AuthException(AppLocalizations.of(context).loginCouldNotSignIn);
       }
 
       if (!mounted) return;
@@ -63,7 +64,7 @@ class _LoginPageState extends State<LoginPage> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error inesperado al iniciar sesión')),
+        SnackBar(content: Text(AppLocalizations.of(context).loginUnexpectedError)),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -73,7 +74,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Iniciar sesión')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).loginTitle)),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -86,18 +87,18 @@ class _LoginPageState extends State<LoginPage> {
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Correo',
-                    prefixIcon: Icon(Icons.email_outlined),
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).loginEmail,
+                    prefixIcon: const Icon(Icons.email_outlined),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Contraseña',
-                    prefixIcon: Icon(Icons.lock_outline),
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context).loginPassword,
+                    prefixIcon: const Icon(Icons.lock_outline),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -109,7 +110,7 @@ class _LoginPageState extends State<LoginPage> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Entrar'),
+                      : Text(AppLocalizations.of(context).loginEnter),
                 ),
                 const SizedBox(height: 12),
                 // Se elimina totalmente la opción de "Crear cuenta"
