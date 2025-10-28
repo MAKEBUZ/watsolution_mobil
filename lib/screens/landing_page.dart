@@ -122,8 +122,8 @@ class _LandingPageState extends State<LandingPage> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         elevation: 3,
                         padding: const EdgeInsets.symmetric(
                             vertical: 16, horizontal: 24),

@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'landing_page.dart';
+import '../app.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
+
+  void _logout(BuildContext context) async {
+    await Supabase.instance.client.auth.signOut();
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LandingPage()),
+        (route) => false,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -11,17 +22,51 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Home'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await Supabase.instance.client.auth.signOut();
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LandingPage()),
-                  (route) => false,
-                );
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              switch (value) {
+                case 'logout':
+                  _logout(context);
+                  break;
+                case 'toggle_theme':
+                  appState.toggleTheme();
+                  break;
+                case 'lang_es':
+                  appState.setLocale(const Locale('es'));
+                  break;
+                case 'lang_en':
+                  appState.setLocale(const Locale('en'));
+                  break;
               }
             },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [Icon(Icons.logout), SizedBox(width: 8), Text('Cerrar sesión')],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'toggle_theme',
+                child: Row(
+                  children: [Icon(Icons.brightness_6), SizedBox(width: 8), Text('Cambiar tema (Light/Dark)')],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'lang_es',
+                child: Row(
+                  children: [Icon(Icons.language), SizedBox(width: 8), Text('Español')],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'lang_en',
+                child: Row(
+                  children: [Icon(Icons.language), SizedBox(width: 8), Text('English')],
+                ),
+              ),
+            ],
           ),
         ],
       ),
