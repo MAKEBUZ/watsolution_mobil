@@ -11,7 +11,7 @@ class MyApp extends StatelessWidget {
     final session = Supabase.instance.client.auth.currentSession;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'WAT Solution',
+      title: 'WatSolution',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
