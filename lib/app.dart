@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/landing_page.dart';
 import 'screens/home_page.dart';
+import 'l10n/app_localizations.dart';
 
 class AppState extends ChangeNotifier {
   ThemeMode themeMode = ThemeMode.light;
@@ -146,7 +147,7 @@ class MyApp extends StatelessWidget {
       builder: (context, _) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'WatSolution',
+          title: AppLocalizations(appState.locale).appTitle,
           theme: _buildLightTheme(),
           darkTheme: _buildDarkTheme(),
           themeMode: appState.themeMode,
@@ -156,6 +157,7 @@ class MyApp extends StatelessWidget {
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
+            AppLocalizationsDelegate(),
           ],
           home: session != null ? const HomePage() : const LandingPage(),
         );
