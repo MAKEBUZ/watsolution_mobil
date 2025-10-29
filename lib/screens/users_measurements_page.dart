@@ -4,16 +4,14 @@ import '../l10n/app_localizations.dart';
 import '../app.dart';
 
 class UsersMeasurementsPage extends StatefulWidget {
-  final bool useMockData;
-  const UsersMeasurementsPage({super.key, this.useMockData = true});
+  const UsersMeasurementsPage({super.key});
 
   @override
   State<UsersMeasurementsPage> createState() => _UsersMeasurementsPageState();
 }
 
 class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
-  List<Map<String, dynamic>> _mockUsers = [];
-  bool _reloading = false; // disparador para FutureBuilder
+  late Future<List<dynamic>> _usersFuture;
 
   Future<List<dynamic>> _fetchUsersWithMeters() async {
     final client = Supabase.instance.client;
@@ -25,66 +23,17 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
     return res as List<dynamic>;
   }
 
-  List<Map<String, dynamic>> _mockData() {
-    return [
-      {
-        'id': 1,
-        'full_name': 'Ana Pérez',
-        'document_number': 'DNI-001',
-        'status': 'active',
-        'meters': [
-          {
-            'id': 101,
-            'reading_date': '2025-06-12',
-            'water_measure': 135.80,
-            'consumption_m3': 12.50,
-            'observation': 'Sin novedades',
-          },
-          {
-            'id': 102,
-            'reading_date': '2025-07-12',
-            'water_measure': 148.30,
-            'consumption_m3': 12.50,
-            'observation': 'Consumo estable',
-          },
-        ],
-      },
-      {
-        'id': 2,
-        'full_name': 'Bruno García',
-        'document_number': 'DNI-002',
-        'status': 'active',
-        'meters': [
-          {
-            'id': 201,
-            'reading_date': '2025-07-01',
-            'water_measure': 90.00,
-            'consumption_m3': 8.25,
-            'observation': 'Fuga reparada recientemente',
-          },
-        ],
-      },
-      {
-        'id': 3,
-        'full_name': 'Carla López',
-        'document_number': 'DNI-003',
-        'status': 'inactive',
-        'meters': [],
-      },
-    ];
-  }
+  
 
   @override
   void initState() {
     super.initState();
-    if (widget.useMockData) {
-      _mockUsers = _mockData();
-    }
+    _usersFuture = _fetchUsersWithMeters();
   }
 
   Future<void> _refresh() async {
     setState(() {
-      _reloading = !_reloading;
+      _usersFuture = _fetchUsersWithMeters();
     });
   }
 
@@ -97,6 +46,13 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
     final docCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
+    // Address controllers
+    final neighborhoodCtrl = TextEditingController();
+    final streetCtrl = TextEditingController();
+    final houseNumberCtrl = TextEditingController();
+    final cityCtrl = TextEditingController();
+    final latitudeCtrl = TextEditingController();
+    final longitudeCtrl = TextEditingController();
 
     bool isSaving = false;
 
@@ -145,7 +101,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                     ),
                     const SizedBox(height: 12),
                     Card(
-                      color: cs.surfaceContainerHighest,
+                      color: cs.surface,
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: Padding(
@@ -197,6 +153,84 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    Text(
+                      loc.address,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: cs.onSurface,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Card(
+                      color: cs.surface,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          children: [
+                            TextFormField(
+                              controller: neighborhoodCtrl,
+                              textInputAction: TextInputAction.next,
+                              decoration: InputDecoration(
+                                labelText: loc.neighborhood,
+                                prefixIcon: const Icon(Icons.location_city),
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty) ? loc.requiredField : null,
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: streetCtrl,
+                              textInputAction: TextInputAction.next,
+                              decoration: InputDecoration(
+                                labelText: loc.street,
+                                prefixIcon: const Icon(Icons.signpost_outlined),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: houseNumberCtrl,
+                              textInputAction: TextInputAction.next,
+                              decoration: InputDecoration(
+                                labelText: loc.houseNumber,
+                                prefixIcon: const Icon(Icons.tag_outlined),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: cityCtrl,
+                              textInputAction: TextInputAction.next,
+                              decoration: InputDecoration(
+                                labelText: loc.city,
+                                prefixIcon: const Icon(Icons.location_on_outlined),
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty) ? loc.requiredField : null,
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: latitudeCtrl,
+                              textInputAction: TextInputAction.next,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: false),
+                              decoration: InputDecoration(
+                                labelText: loc.latitude,
+                                prefixIcon: const Icon(Icons.explore_outlined),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: longitudeCtrl,
+                              textInputAction: TextInputAction.done,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: false),
+                              decoration: InputDecoration(
+                                labelText: loc.longitude,
+                                prefixIcon: const Icon(Icons.explore),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -212,32 +246,43 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                   if (!formKey.currentState!.validate()) return;
                                   setInnerState(() => isSaving = true);
                                   try {
+                                    final client = Supabase.instance.client;
                                     final fullName = nameCtrl.text.trim();
                                     final documentNumber = docCtrl.text.trim();
                                     final phone = phoneCtrl.text.trim();
                                     final email = emailCtrl.text.trim();
 
-                                    if (widget.useMockData) {
-                                      // Inserta en la lista mock
-                                      _mockUsers.add({
-                                        'id': DateTime.now().millisecondsSinceEpoch,
-                                        'full_name': fullName,
-                                        'document_number': documentNumber,
-                                        'phone': phone.isEmpty ? null : phone,
-                                        'email': email.isEmpty ? null : email,
-                                        'status': 'active',
-                                        'meters': [],
-                                      });
-                                    } else {
-                                      final client = Supabase.instance.client;
-                                      await client.from('users').insert({
-                                        'full_name': fullName,
-                                        'document_number': documentNumber,
-                                        'phone': phone.isEmpty ? null : phone,
-                                        'email': email.isEmpty ? null : email,
-                                        'status': 'active',
-                                      });
-                                    }
+                                    // Address values
+                                    final neighborhood = neighborhoodCtrl.text.trim();
+                                    final street = streetCtrl.text.trim();
+                                    final houseNumber = houseNumberCtrl.text.trim();
+                                    final city = cityCtrl.text.trim();
+                                    final latitude = latitudeCtrl.text.trim();
+                                    final longitude = longitudeCtrl.text.trim();
+
+                                    final addrInsert = await client
+                                        .from('addresses')
+                                        .insert({
+                                          'neighborhood': neighborhood,
+                                          'street': street.isEmpty ? null : street,
+                                          'house_number': houseNumber.isEmpty ? null : houseNumber,
+                                          'city': city,
+                                          'latitude': latitude.isEmpty ? null : double.tryParse(latitude),
+                                          'longitude': longitude.isEmpty ? null : double.tryParse(longitude),
+                                        })
+                                        .select('id')
+                                        .single();
+
+                                    final addressId = addrInsert['id'] as int;
+
+                                    await client.from('users').insert({
+                                      'full_name': fullName,
+                                      'document_number': documentNumber,
+                                      'phone': phone.isEmpty ? null : phone,
+                                      'email': email.isEmpty ? null : email,
+                                      'status': 'active',
+                                      'address_id': addressId,
+                                    });
 
                                     if (mounted) {
                                       Navigator.pop(context);
@@ -343,7 +388,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
         label: Text(AppLocalizations.of(context).createUser),
       ),
       body: FutureBuilder<List<dynamic>>(
-        future: widget.useMockData ? Future.value(_mockUsers) : _fetchUsersWithMeters(),
+        future: _usersFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

@@ -33,6 +33,13 @@ class AppLocalizations {
       'documentNumber': 'Documento',
       'phone': 'Teléfono',
       'email': 'Correo',
+      'address': 'Dirección',
+      'neighborhood': 'Barrio',
+      'street': 'Calle',
+      'houseNumber': 'Número',
+      'city': 'Ciudad',
+      'latitude': 'Latitud',
+      'longitude': 'Longitud',
       'save': 'Guardar',
       'cancel': 'Cancelar',
       'requiredField': 'Este campo es requerido',
@@ -78,6 +85,13 @@ class AppLocalizations {
       'documentNumber': 'Document',
       'phone': 'Phone',
       'email': 'Email',
+      'address': 'Address',
+      'neighborhood': 'Neighborhood',
+      'street': 'Street',
+      'houseNumber': 'House number',
+      'city': 'City',
+      'latitude': 'Latitude',
+      'longitude': 'Longitude',
       'save': 'Save',
       'cancel': 'Cancel',
       'requiredField': 'This field is required',
@@ -130,6 +144,13 @@ class AppLocalizations {
   String get documentNumber => _get('documentNumber');
   String get phone => _get('phone');
   String get email => _get('email');
+  String get address => _get('address');
+  String get neighborhood => _get('neighborhood');
+  String get street => _get('street');
+  String get houseNumber => _get('houseNumber');
+  String get city => _get('city');
+  String get latitude => _get('latitude');
+  String get longitude => _get('longitude');
   String get save => _get('save');
   String get cancel => _get('cancel');
   String get requiredField => _get('requiredField');
