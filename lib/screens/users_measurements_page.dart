@@ -537,8 +537,8 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                                   ),
                                             ),
                                             const SizedBox(height: 4),
-                                            Text(
-                                              'Agua: $waterMeasure',
+                                            Text( 
+                                              '${AppLocalizations.of(context).measurementWater}: $waterMeasure',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall
@@ -569,13 +569,13 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                                   final ok = await launchUrlString(url, webOnlyWindowName: '_blank');
                                                   if (!ok && context.mounted) {
                                                     ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(content: Text('No se pudo abrir la factura.')),
+                                                      SnackBar(content: Text(AppLocalizations.of(context).invoiceOpenFailed)),
                                                     );
                                                   }
                                                 } catch (e) {
                                                   if (context.mounted) {
                                                     ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(content: Text('No se pudo obtener la factura.')),
+                                                      SnackBar(content: Text(AppLocalizations.of(context).invoiceFetchFailed)),
                                                     );
                                                   }
                                                 }

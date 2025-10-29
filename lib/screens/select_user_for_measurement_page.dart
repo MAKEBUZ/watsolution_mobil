@@ -203,7 +203,7 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
                                   if (mounted) {
                                     Navigator.pop(context);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Medición registrada y factura enviada')),
+                                      SnackBar(content: Text(loc.invoiceUploaded)),
                                     );
                                   }
                                 } catch (e) {

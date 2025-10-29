@@ -259,7 +259,7 @@ class HomePage extends StatelessWidget {
                                           fontWeight: FontWeight.w600,
                                         );
                                     if (addressId == null) {
-                                      return Text('Sin dirección', style: titleStyle);
+                                      return Text(AppLocalizations.of(context).noAddress, style: titleStyle);
                                     }
                                     return FutureBuilder<dynamic>(
                                       future: Supabase.instance.client
@@ -269,9 +269,9 @@ class HomePage extends StatelessWidget {
                                           .limit(1),
                                       builder: (context, addrSnap) {
                                         if (addrSnap.connectionState == ConnectionState.waiting) {
-                                          return Text('Cargando dirección…', style: titleStyle);
+                                          return Text(AppLocalizations.of(context).addressLoading, style: titleStyle);
                                         }
-                                        String label = 'Sin dirección';
+                                        String label = AppLocalizations.of(context).noAddress;
                                         final data = addrSnap.data;
                                         if (data is List && data.isNotEmpty) {
                                           final a = data.first as Map<String, dynamic>;
@@ -283,7 +283,7 @@ class HomePage extends StatelessWidget {
                                           if (left.isNotEmpty && city.isNotEmpty) {
                                             label = '$left, $city';
                                           } else {
-                                            label = left.isNotEmpty ? left : (city.isNotEmpty ? city : 'Sin dirección');
+                                            label = left.isNotEmpty ? left : (city.isNotEmpty ? city : AppLocalizations.of(context).noAddress);
                                           }
                                         }
                                         return Text(label, style: titleStyle);
@@ -293,12 +293,12 @@ class HomePage extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Fecha: ${fmtDate(dateStr)}',
+                                  '${AppLocalizations.of(context).date}: ${fmtDate(dateStr)}',
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.7)),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Agua: $wm',
+                                  '${AppLocalizations.of(context).measurementWater}: $wm',
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.7)),
                                 ),
                                 if (obs.isNotEmpty) ...[
@@ -323,13 +323,13 @@ class HomePage extends StatelessWidget {
                                       final ok = await launchUrlString(url, webOnlyWindowName: '_blank');
                                       if (!ok && context.mounted) {
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('No se pudo abrir la factura.')),
+                                          SnackBar(content: Text(AppLocalizations.of(context).invoiceOpenFailed)),
                                         );
                                       }
                                     } catch (e) {
                                       if (context.mounted) {
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('No se pudo obtener la factura.')),
+                                          SnackBar(content: Text(AppLocalizations.of(context).invoiceFetchFailed)),
                                         );
                                       }
                                     }
