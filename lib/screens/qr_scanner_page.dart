@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../l10n/app_localizations.dart';
 import '../app.dart';
+import 'select_user_for_measurement_page.dart';
 
 class QrScannerPage extends StatefulWidget {
   const QrScannerPage({super.key});
@@ -109,6 +110,15 @@ class _QrScannerPageState extends State<QrScannerPage> {
       appBar: AppBar(
         title: Text(AppLocalizations.of(context).homeScanQR),
         actions: [
+          IconButton(
+            tooltip: AppLocalizations.of(context).homeUsers,
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SelectUserForMeasurementPage()),
+              );
+            },
+            icon: const Icon(Icons.people_outline),
+          ),
           IconButton(
             tooltip: 'Linterna',
             onPressed: () => _controller.toggleTorch(),
