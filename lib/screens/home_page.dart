@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import '../app.dart';
 import '../l10n/app_localizations.dart';
 import 'users_measurements_page.dart';
 import 'qr_scanner_page.dart';
+import '../utils/storage_service.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -217,6 +219,16 @@ class HomePage extends StatelessWidget {
                     final dateStr = (m['reading_date'] ?? '').toString();
                     final obs = (m['observation'] ?? '').toString();
                     final addressId = m['address_id'] as int?;
+                    final meterId = m['id'] as int?;
+                    final peopleId = m['people_id'] as int?;
+                    String? invoicePath;
+                    final ip = m['invoice_path'];
+                    if (ip is String && ip.isNotEmpty) {
+                      invoicePath = ip;
+                    } else if (meterId != null && peopleId != null) {
+                      final fileName = 'factura_${meterId}_${fmtDate(dateStr)}.pdf';
+                      invoicePath = 'people/$peopleId/$fileName';
+                    }
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(12),
@@ -300,6 +312,29 @@ class HomePage extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.download_outlined),
+                            color: cs.onSurface.withOpacity(0.75),
+                            onPressed: invoicePath == null
+                                ? null
+                                : () async {
+                                    try {
+                                      final url = await StorageService().createSignedUrl(invoicePath!, const Duration(minutes: 15));
+                                      final ok = await launchUrlString(url, webOnlyWindowName: '_blank');
+                                      if (!ok && context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('No se pudo abrir la factura.')),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('No se pudo obtener la factura.')),
+                                        );
+                                      }
+                                    }
+                                  },
+                          ),
                           Icon(Icons.chevron_right, color: cs.onSurface.withOpacity(0.6)),
                         ],
                       ),

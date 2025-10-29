@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../utils/storage_service.dart';
+import '../utils/invoice_pdf.dart';
 import '../l10n/app_localizations.dart';
 
 class SelectUserForMeasurementPage extends StatefulWidget {
@@ -143,23 +145,71 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
                                 setInnerState(() => isSaving = true);
                                 try {
                                   final client = Supabase.instance.client;
-                                  await client.from('meters').insert({
-                                    'people_id': personId,
-                                    'address_id': addressId,
-                                    'water_measure': wm,
-                                    'reading_date': fmtDate(readingDate),
-                                    'observation': obsCtrl.text.trim().isEmpty ? null : obsCtrl.text.trim(),
-                                  });
+                                  // Insertar y recuperar la fila insertada para obtener el ID
+                                  final inserted = await client
+                                      .from('meters')
+                                      .insert({
+                                        'people_id': personId,
+                                        'address_id': addressId,
+                                        'water_measure': wm,
+                                        'reading_date': fmtDate(readingDate),
+                                        'observation': obsCtrl.text.trim().isEmpty ? null : obsCtrl.text.trim(),
+                                      })
+                                      .select('id, people_id, address_id, water_measure, reading_date, observation')
+                                      .single();
+
+                                  // Obtener datos de dirección para la factura si existen
+                                  Map<String, dynamic>? addrData;
+                                  final addrId = inserted['address_id'] as int?;
+                                  if (addrId != null) {
+                                    final addrList = await client
+                                        .from('addresses')
+                                        .select('neighborhood, street, house_number, city')
+                                        .eq('id', addrId)
+                                        .limit(1);
+                                    if (addrList is List && addrList.isNotEmpty) {
+                                      addrData = (addrList.first as Map<String, dynamic>);
+                                    }
+                                  }
+
+                                  // Generar factura PDF
+                                  final pdfBytes = await buildInvoicePdf(
+                                    InvoiceData(person: person, meter: inserted, address: addrData),
+                                  );
+
+                                  // Subir al bucket con una ruta organizada por persona
+                                  final personIdStr = personId.toString();
+                                  final readingStr = inserted['reading_date']?.toString() ?? fmtDate(readingDate);
+                                  final meterIdStr = inserted['id']?.toString() ?? '0';
+                                  final fileName = 'factura_${meterIdStr}_${readingStr}.pdf';
+                                  final path = 'people/$personIdStr/$fileName';
+                                  await StorageService().uploadBytes(
+                                    path,
+                                    pdfBytes,
+                                    contentType: 'application/pdf',
+                                    upsert: true,
+                                  );
+
+                                  // Guardar la ruta de la factura en la medición (si existe la columna)
+                                  try {
+                                    await client
+                                        .from('meters')
+                                        .update({'invoice_path': path})
+                                        .eq('id', inserted['id']);
+                                  } catch (_) {
+                                    // Ignorar si la columna no existe o hay restricción de políticas
+                                  }
+
                                   if (mounted) {
                                     Navigator.pop(context);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Medición registrada')),
+                                      const SnackBar(content: Text('Medición registrada y factura enviada')),
                                     );
                                   }
                                 } catch (e) {
                                   setInnerState(() => isSaving = false);
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(loc.errorLoading)),
+                                    SnackBar(content: Text('${loc.errorLoading}: ${e.toString()}')),
                                   );
                                 }
                               },
