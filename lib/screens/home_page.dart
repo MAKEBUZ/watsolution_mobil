@@ -15,6 +15,14 @@ class HomePage extends StatelessWidget {
     }
   }
 
+  Stream<List<Map<String, dynamic>>> _streamRecentMeters() {
+    return Supabase.instance.client
+        .from('meters')
+        .stream(primaryKey: ['id'])
+        .order('reading_date', ascending: false)
+        .limit(20);
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -167,14 +175,138 @@ class HomePage extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 12),
-            // Placeholder list items (no functionality)
-            Column(
-              children: List.generate(3, (index) {
-                return _HistoryItem(
-                  cs: cs,
-                  isDark: isDark,
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _streamRecentMeters(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        AppLocalizations.of(context).errorLoading,
+                        style: TextStyle(color: cs.error),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+                final items = snapshot.data ?? [];
+                if (items.isEmpty) {
+                  return Center(
+                    child: Text(
+                      AppLocalizations.of(context).noMeasurements,
+                      style: TextStyle(color: cs.onBackground.withOpacity(0.7)),
+                    ),
+                  );
+                }
+                String fmtDate(String? iso) {
+                  if (iso == null || iso.isEmpty) return '—';
+                  try {
+                    final d = DateTime.parse(iso);
+                    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+                  } catch (_) {
+                    return iso;
+                  }
+                }
+                return Column(
+                  children: items.map((m) {
+                    final wm = m['water_measure']?.toString() ?? '—';
+                    final dateStr = (m['reading_date'] ?? '').toString();
+                    final obs = (m['observation'] ?? '').toString();
+                    final addressId = m['address_id'] as int?;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: cs.surface,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            height: 48,
+                            width: 72,
+                            decoration: BoxDecoration(
+                              color: cs.primary.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.stacked_line_chart, color: cs.primary),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Builder(
+                                  builder: (context) {
+                                    final titleStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: cs.onSurface,
+                                          fontWeight: FontWeight.w600,
+                                        );
+                                    if (addressId == null) {
+                                      return Text('Sin dirección', style: titleStyle);
+                                    }
+                                    return FutureBuilder<dynamic>(
+                                      future: Supabase.instance.client
+                                          .from('addresses')
+                                          .select('neighborhood, street, house_number, city')
+                                          .eq('id', addressId)
+                                          .limit(1),
+                                      builder: (context, addrSnap) {
+                                        if (addrSnap.connectionState == ConnectionState.waiting) {
+                                          return Text('Cargando dirección…', style: titleStyle);
+                                        }
+                                        String label = 'Sin dirección';
+                                        final data = addrSnap.data;
+                                        if (data is List && data.isNotEmpty) {
+                                          final a = data.first as Map<String, dynamic>;
+                                          final neighborhood = (a['neighborhood'] ?? '').toString().trim();
+                                          final street = (a['street'] ?? '').toString().trim();
+                                          final house = (a['house_number'] ?? '').toString().trim();
+                                          final city = (a['city'] ?? '').toString().trim();
+                                          final left = [neighborhood, street, house].where((p) => p.isNotEmpty).join(' ');
+                                          if (left.isNotEmpty && city.isNotEmpty) {
+                                            label = '$left, $city';
+                                          } else {
+                                            label = left.isNotEmpty ? left : (city.isNotEmpty ? city : 'Sin dirección');
+                                          }
+                                        }
+                                        return Text(label, style: titleStyle);
+                                      },
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Fecha: ${fmtDate(dateStr)}',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.7)),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Agua: $wm',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.7)),
+                                ),
+                                if (obs.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    obs,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.6)),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.chevron_right, color: cs.onSurface.withOpacity(0.6)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 );
-              }),
+              },
             ),
           ],
         ),
