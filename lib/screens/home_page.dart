@@ -13,7 +13,10 @@ class HomePage extends StatelessWidget {
   void _logout(BuildContext context) async {
     await Supabase.instance.client.auth.signOut();
     if (context.mounted) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LandingPage()),
+        (route) => false,
+      );
     }
   }
 
