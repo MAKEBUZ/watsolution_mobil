@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app.dart';
 import '../l10n/app_localizations.dart';
 import 'users_measurements_page.dart';
+import 'qr_scanner_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -134,7 +135,11 @@ class HomePage extends StatelessWidget {
                     icon: Icons.qr_code_scanner,
                     bg: cardBg(),
                     fg: cardFg(),
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const QrScannerPage()),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),
