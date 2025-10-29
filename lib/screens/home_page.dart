@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import 'users_measurements_page.dart';
 import 'qr_scanner_page.dart';
 import '../utils/storage_service.dart';
+import 'landing_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -14,7 +15,7 @@ class HomePage extends StatelessWidget {
     await Supabase.instance.client.auth.signOut();
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LandingPage()),
+        MaterialPageRoute(builder: (_) => LandingPage()),
         (route) => false,
       );
     }
