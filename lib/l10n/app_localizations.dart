@@ -24,6 +24,9 @@ class AppLocalizations {
       'homeHistory': 'Historial de Mediciones',
       // Nueva clave para el texto "Medición"
       'measurement': 'Medición',
+      // Users/Measurements page
+      'noMeasurements': 'Sin mediciones registradas',
+      'errorLoading': 'Error al cargar datos',
       // Login
       'loginTitle': 'Iniciar sesión',
       'loginEmail': 'Correo',
@@ -54,6 +57,9 @@ class AppLocalizations {
       'homeHistory': 'Measurement History',
       // New key for "Measurement"
       'measurement': 'Measurement',
+      // Users/Measurements page
+      'noMeasurements': 'No measurements recorded',
+      'errorLoading': 'Error loading data',
       // Login
       'loginTitle': 'Sign in',
       'loginEmail': 'Email',
@@ -91,6 +97,9 @@ class AppLocalizations {
   String get homeHistory => _get('homeHistory');
   // Getter para "Medición" / "Measurement"
   String get measurement => _get('measurement');
+  // Users/Measurements page
+  String get noMeasurements => _get('noMeasurements');
+  String get errorLoading => _get('errorLoading');
   // Login
   String get loginTitle => _get('loginTitle');
   String get loginEmail => _get('loginEmail');
