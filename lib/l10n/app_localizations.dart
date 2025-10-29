@@ -24,6 +24,28 @@ class AppLocalizations {
       'homeHistory': 'Historial de Mediciones',
       // Nueva clave para el texto "Medición"
       'measurement': 'Medición',
+      // Users/Measurements page
+      'noMeasurements': 'Sin mediciones registradas',
+      'errorLoading': 'Error al cargar datos',
+      // Create User form
+      'createUser': 'Crear usuario',
+      'fullName': 'Nombre completo',
+      'documentNumber': 'Documento',
+      'phone': 'Teléfono',
+      'email': 'Correo',
+      'address': 'Dirección',
+      'neighborhood': 'Barrio',
+      'street': 'Calle',
+      'houseNumber': 'Número',
+      'city': 'Ciudad',
+      'latitude': 'Latitud',
+      'longitude': 'Longitud',
+      'save': 'Guardar',
+      'cancel': 'Cancelar',
+      'requiredField': 'Este campo es requerido',
+      'invalidEmail': 'Correo inválido',
+      'userCreated': 'Usuario creado',
+      'userCreateError': 'Error al crear usuario',
       // Login
       'loginTitle': 'Iniciar sesión',
       'loginEmail': 'Correo',
@@ -54,6 +76,28 @@ class AppLocalizations {
       'homeHistory': 'Measurement History',
       // New key for "Measurement"
       'measurement': 'Measurement',
+      // Users/Measurements page
+      'noMeasurements': 'No measurements recorded',
+      'errorLoading': 'Error loading data',
+      // Create User form
+      'createUser': 'Create user',
+      'fullName': 'Full name',
+      'documentNumber': 'Document',
+      'phone': 'Phone',
+      'email': 'Email',
+      'address': 'Address',
+      'neighborhood': 'Neighborhood',
+      'street': 'Street',
+      'houseNumber': 'House number',
+      'city': 'City',
+      'latitude': 'Latitude',
+      'longitude': 'Longitude',
+      'save': 'Save',
+      'cancel': 'Cancel',
+      'requiredField': 'This field is required',
+      'invalidEmail': 'Invalid email',
+      'userCreated': 'User created',
+      'userCreateError': 'Error creating user',
       // Login
       'loginTitle': 'Sign in',
       'loginEmail': 'Email',
@@ -91,6 +135,28 @@ class AppLocalizations {
   String get homeHistory => _get('homeHistory');
   // Getter para "Medición" / "Measurement"
   String get measurement => _get('measurement');
+  // Users/Measurements page
+  String get noMeasurements => _get('noMeasurements');
+  String get errorLoading => _get('errorLoading');
+  // Create User form
+  String get createUser => _get('createUser');
+  String get fullName => _get('fullName');
+  String get documentNumber => _get('documentNumber');
+  String get phone => _get('phone');
+  String get email => _get('email');
+  String get address => _get('address');
+  String get neighborhood => _get('neighborhood');
+  String get street => _get('street');
+  String get houseNumber => _get('houseNumber');
+  String get city => _get('city');
+  String get latitude => _get('latitude');
+  String get longitude => _get('longitude');
+  String get save => _get('save');
+  String get cancel => _get('cancel');
+  String get requiredField => _get('requiredField');
+  String get invalidEmail => _get('invalidEmail');
+  String get userCreated => _get('userCreated');
+  String get userCreateError => _get('userCreateError');
   // Login
   String get loginTitle => _get('loginTitle');
   String get loginEmail => _get('loginEmail');
