@@ -27,6 +27,18 @@ class AppLocalizations {
       // Users/Measurements page
       'noMeasurements': 'Sin mediciones registradas',
       'errorLoading': 'Error al cargar datos',
+      // Create User form
+      'createUser': 'Crear usuario',
+      'fullName': 'Nombre completo',
+      'documentNumber': 'Documento',
+      'phone': 'Teléfono',
+      'email': 'Correo',
+      'save': 'Guardar',
+      'cancel': 'Cancelar',
+      'requiredField': 'Este campo es requerido',
+      'invalidEmail': 'Correo inválido',
+      'userCreated': 'Usuario creado',
+      'userCreateError': 'Error al crear usuario',
       // Login
       'loginTitle': 'Iniciar sesión',
       'loginEmail': 'Correo',
@@ -60,6 +72,18 @@ class AppLocalizations {
       // Users/Measurements page
       'noMeasurements': 'No measurements recorded',
       'errorLoading': 'Error loading data',
+      // Create User form
+      'createUser': 'Create user',
+      'fullName': 'Full name',
+      'documentNumber': 'Document',
+      'phone': 'Phone',
+      'email': 'Email',
+      'save': 'Save',
+      'cancel': 'Cancel',
+      'requiredField': 'This field is required',
+      'invalidEmail': 'Invalid email',
+      'userCreated': 'User created',
+      'userCreateError': 'Error creating user',
       // Login
       'loginTitle': 'Sign in',
       'loginEmail': 'Email',
@@ -100,6 +124,18 @@ class AppLocalizations {
   // Users/Measurements page
   String get noMeasurements => _get('noMeasurements');
   String get errorLoading => _get('errorLoading');
+  // Create User form
+  String get createUser => _get('createUser');
+  String get fullName => _get('fullName');
+  String get documentNumber => _get('documentNumber');
+  String get phone => _get('phone');
+  String get email => _get('email');
+  String get save => _get('save');
+  String get cancel => _get('cancel');
+  String get requiredField => _get('requiredField');
+  String get invalidEmail => _get('invalidEmail');
+  String get userCreated => _get('userCreated');
+  String get userCreateError => _get('userCreateError');
   // Login
   String get loginTitle => _get('loginTitle');
   String get loginEmail => _get('loginEmail');

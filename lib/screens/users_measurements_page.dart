@@ -3,9 +3,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../l10n/app_localizations.dart';
 import '../app.dart';
 
-class UsersMeasurementsPage extends StatelessWidget {
+class UsersMeasurementsPage extends StatefulWidget {
   final bool useMockData;
   const UsersMeasurementsPage({super.key, this.useMockData = true});
+
+  @override
+  State<UsersMeasurementsPage> createState() => _UsersMeasurementsPageState();
+}
+
+class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
+  List<Map<String, dynamic>> _mockUsers = [];
+  bool _reloading = false; // disparador para FutureBuilder
 
   Future<List<dynamic>> _fetchUsersWithMeters() async {
     final client = Supabase.instance.client;
@@ -64,6 +72,202 @@ class UsersMeasurementsPage extends StatelessWidget {
         'meters': [],
       },
     ];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.useMockData) {
+      _mockUsers = _mockData();
+    }
+  }
+
+  Future<void> _refresh() async {
+    setState(() {
+      _reloading = !_reloading;
+    });
+  }
+
+  Future<void> _openCreateUserForm() async {
+    final loc = AppLocalizations.of(context);
+    final cs = Theme.of(context).colorScheme;
+
+    final formKey = GlobalKey<FormState>();
+    final nameCtrl = TextEditingController();
+    final docCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+
+    bool isSaving = false;
+
+    String? emailValidator(String? v) {
+      if (v == null || v.isEmpty) return null; // opcional
+      final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+      if (!emailRegex.hasMatch(v)) return loc.invalidEmail;
+      return null;
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setInnerState) {
+              return Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.person_add_alt_1, color: cs.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          loc.createUser,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: cs.onSurface,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      color: cs.surfaceContainerHighest,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          children: [
+                            TextFormField(
+                              controller: nameCtrl,
+                              textInputAction: TextInputAction.next,
+                              decoration: InputDecoration(
+                                labelText: loc.fullName,
+                                prefixIcon: const Icon(Icons.person_outline),
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty) ? loc.requiredField : null,
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: docCtrl,
+                              textInputAction: TextInputAction.next,
+                              decoration: InputDecoration(
+                                labelText: loc.documentNumber,
+                                prefixIcon: const Icon(Icons.badge_outlined),
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty) ? loc.requiredField : null,
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: phoneCtrl,
+                              textInputAction: TextInputAction.next,
+                              keyboardType: TextInputType.phone,
+                              decoration: InputDecoration(
+                                labelText: loc.phone,
+                                prefixIcon: const Icon(Icons.phone_outlined),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: emailCtrl,
+                              textInputAction: TextInputAction.done,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: InputDecoration(
+                                labelText: loc.email,
+                                prefixIcon: const Icon(Icons.email_outlined),
+                              ),
+                              validator: emailValidator,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(loc.cancel),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton.icon(
+                          onPressed: isSaving
+                              ? null
+                              : () async {
+                                  if (!formKey.currentState!.validate()) return;
+                                  setInnerState(() => isSaving = true);
+                                  try {
+                                    final fullName = nameCtrl.text.trim();
+                                    final documentNumber = docCtrl.text.trim();
+                                    final phone = phoneCtrl.text.trim();
+                                    final email = emailCtrl.text.trim();
+
+                                    if (widget.useMockData) {
+                                      // Inserta en la lista mock
+                                      _mockUsers.add({
+                                        'id': DateTime.now().millisecondsSinceEpoch,
+                                        'full_name': fullName,
+                                        'document_number': documentNumber,
+                                        'phone': phone.isEmpty ? null : phone,
+                                        'email': email.isEmpty ? null : email,
+                                        'status': 'active',
+                                        'meters': [],
+                                      });
+                                    } else {
+                                      final client = Supabase.instance.client;
+                                      await client.from('users').insert({
+                                        'full_name': fullName,
+                                        'document_number': documentNumber,
+                                        'phone': phone.isEmpty ? null : phone,
+                                        'email': email.isEmpty ? null : email,
+                                        'status': 'active',
+                                      });
+                                    }
+
+                                    if (mounted) {
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(loc.userCreated)),
+                                      );
+                                      await _refresh();
+                                    }
+                                  } catch (e) {
+                                    setInnerState(() => isSaving = false);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(loc.userCreateError)),
+                                      );
+                                    }
+                                  }
+                                },
+                          icon: const Icon(Icons.save_outlined),
+                          label: Text(loc.save),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -133,8 +337,13 @@ class UsersMeasurementsPage extends StatelessWidget {
           const SizedBox(width: 8),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openCreateUserForm,
+        icon: const Icon(Icons.person_add_alt_1),
+        label: Text(AppLocalizations.of(context).createUser),
+      ),
       body: FutureBuilder<List<dynamic>>(
-        future: useMockData ? Future.value(_mockData()) : _fetchUsersWithMeters(),
+        future: widget.useMockData ? Future.value(_mockUsers) : _fetchUsersWithMeters(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
