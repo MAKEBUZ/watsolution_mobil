@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import '../l10n/app_localizations.dart';
 import '../app.dart';
+import '../utils/storage_service.dart';
 
 class UsersMeasurementsPage extends StatefulWidget {
   const UsersMeasurementsPage({super.key});
@@ -490,6 +492,18 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                 } catch (_) {}
                                 final waterMeasure = mm['water_measure']?.toString() ?? '—';
                                 final obs = (mm['observation'] ?? '').toString();
+                                final meterId = mm['id'] as int?;
+                                String? invoicePath;
+                                final ip = mm['invoice_path'];
+                                if (ip is String && ip.isNotEmpty) {
+                                  invoicePath = ip;
+                                } else if (meterId != null && personId != null) {
+                                  final readingLabel = readingDate != null
+                                      ? '${readingDate.year}-${readingDate.month.toString().padLeft(2, '0')}-${readingDate.day.toString().padLeft(2, '0')}'
+                                      : '—';
+                                  final fileName = 'factura_${meterId}_${readingLabel}.pdf';
+                                  invoicePath = 'people/${personId}/${fileName}';
+                                }
 
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 8),
@@ -523,8 +537,8 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                                   ),
                                             ),
                                             const SizedBox(height: 4),
-                                            Text(
-                                              'Agua: $waterMeasure',
+                                            Text( 
+                                              '${AppLocalizations.of(context).measurementWater}: $waterMeasure',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall
@@ -542,6 +556,30 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                             ],
                                           ],
                                         ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      IconButton(
+                                        icon: const Icon(Icons.download_outlined),
+                                        color: tileFg().withOpacity(0.75),
+                                        onPressed: invoicePath == null
+                                            ? null
+                                            : () async {
+                                                try {
+                                                  final url = await StorageService().createSignedUrl(invoicePath!, const Duration(minutes: 15));
+                                                  final ok = await launchUrlString(url, webOnlyWindowName: '_blank');
+                                                  if (!ok && context.mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text(AppLocalizations.of(context).invoiceOpenFailed)),
+                                                    );
+                                                  }
+                                                } catch (e) {
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text(AppLocalizations.of(context).invoiceFetchFailed)),
+                                                    );
+                                                  }
+                                                }
+                                              },
                                       ),
                                     ],
                                   ),

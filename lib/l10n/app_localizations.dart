@@ -24,6 +24,7 @@ class AppLocalizations {
       'homeHistory': 'Historial de Mediciones',
       // Nueva clave para el texto "Medición"
       'measurement': 'Medición',
+      'measurementWater': 'Agua',
       // Users/Measurements page
       'noMeasurements': 'Sin mediciones registradas',
       'errorLoading': 'Error al cargar datos',
@@ -61,6 +62,15 @@ class AppLocalizations {
       'landingDescription': 'Aplicación para la toma de consumos',
       'landingSignInButton': 'Iniciar sesión',
       'landingUseYourAccount': 'Usa tu cuenta para comenzar',
+      // Common labels used in measurement cards
+      'noAddress': 'Sin dirección',
+      'addressLoading': 'Cargando dirección…',
+      'date': 'Fecha',
+      'consumptionM3': 'Consumo m³',
+      // Invoices
+      'invoiceUploaded': 'Medición registrada y factura enviada',
+      'invoiceOpenFailed': 'No se pudo abrir la factura.',
+      'invoiceFetchFailed': 'No se pudo obtener la factura.',
     },
     'en': {
       'appTitle': 'WatSolution',
@@ -76,6 +86,7 @@ class AppLocalizations {
       'homeHistory': 'Measurement History',
       // New key for "Measurement"
       'measurement': 'Measurement',
+      'measurementWater': 'Water',
       // Users/Measurements page
       'noMeasurements': 'No measurements recorded',
       'errorLoading': 'Error loading data',
@@ -113,6 +124,15 @@ class AppLocalizations {
       'landingDescription': 'App for consumption readings',
       'landingSignInButton': 'Sign in',
       'landingUseYourAccount': 'Use your account to get started',
+      // Common labels used in measurement cards
+      'noAddress': 'No address',
+      'addressLoading': 'Loading address…',
+      'date': 'Date',
+      'consumptionM3': 'Consumption m³',
+      // Invoices
+      'invoiceUploaded': 'Measurement recorded and invoice uploaded',
+      'invoiceOpenFailed': 'Could not open the invoice.',
+      'invoiceFetchFailed': 'Could not fetch the invoice.',
     },
   };
 
@@ -135,6 +155,14 @@ class AppLocalizations {
   String get homeHistory => _get('homeHistory');
   // Getter para "Medición" / "Measurement"
   String get measurement => _get('measurement');
+  String get measurementWater => _get('measurementWater');
+  String get noAddress => _get('noAddress');
+  String get addressLoading => _get('addressLoading');
+  String get date => _get('date');
+  String get consumptionM3 => _get('consumptionM3');
+  String get invoiceUploaded => _get('invoiceUploaded');
+  String get invoiceOpenFailed => _get('invoiceOpenFailed');
+  String get invoiceFetchFailed => _get('invoiceFetchFailed');
   // Users/Measurements page
   String get noMeasurements => _get('noMeasurements');
   String get errorLoading => _get('errorLoading');

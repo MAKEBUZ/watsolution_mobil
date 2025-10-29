@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'landing_page.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import '../app.dart';
 import '../l10n/app_localizations.dart';
 import 'users_measurements_page.dart';
 import 'qr_scanner_page.dart';
+import '../utils/storage_service.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -17,6 +18,14 @@ class HomePage extends StatelessWidget {
         (route) => false,
       );
     }
+  }
+
+  Stream<List<Map<String, dynamic>>> _streamRecentMeters() {
+    return Supabase.instance.client
+        .from('meters')
+        .stream(primaryKey: ['id'])
+        .order('reading_date', ascending: false)
+        .limit(20);
   }
 
   @override
@@ -171,14 +180,171 @@ class HomePage extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 12),
-            // Placeholder list items (no functionality)
-            Column(
-              children: List.generate(3, (index) {
-                return _HistoryItem(
-                  cs: cs,
-                  isDark: isDark,
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _streamRecentMeters(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        AppLocalizations.of(context).errorLoading,
+                        style: TextStyle(color: cs.error),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+                final items = snapshot.data ?? [];
+                if (items.isEmpty) {
+                  return Center(
+                    child: Text(
+                      AppLocalizations.of(context).noMeasurements,
+                      style: TextStyle(color: cs.onBackground.withOpacity(0.7)),
+                    ),
+                  );
+                }
+                String fmtDate(String? iso) {
+                  if (iso == null || iso.isEmpty) return '—';
+                  try {
+                    final d = DateTime.parse(iso);
+                    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+                  } catch (_) {
+                    return iso;
+                  }
+                }
+                return Column(
+                  children: items.map((m) {
+                    final wm = m['water_measure']?.toString() ?? '—';
+                    final dateStr = (m['reading_date'] ?? '').toString();
+                    final obs = (m['observation'] ?? '').toString();
+                    final addressId = m['address_id'] as int?;
+                    final meterId = m['id'] as int?;
+                    final peopleId = m['people_id'] as int?;
+                    String? invoicePath;
+                    final ip = m['invoice_path'];
+                    if (ip is String && ip.isNotEmpty) {
+                      invoicePath = ip;
+                    } else if (meterId != null && peopleId != null) {
+                      final fileName = 'factura_${meterId}_${fmtDate(dateStr)}.pdf';
+                      invoicePath = 'people/$peopleId/$fileName';
+                    }
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: cs.surface,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            height: 48,
+                            width: 72,
+                            decoration: BoxDecoration(
+                              color: cs.primary.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.stacked_line_chart, color: cs.primary),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Builder(
+                                  builder: (context) {
+                                    final titleStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: cs.onSurface,
+                                          fontWeight: FontWeight.w600,
+                                        );
+                                    if (addressId == null) {
+                                      return Text(AppLocalizations.of(context).noAddress, style: titleStyle);
+                                    }
+                                    return FutureBuilder<dynamic>(
+                                      future: Supabase.instance.client
+                                          .from('addresses')
+                                          .select('neighborhood, street, house_number, city')
+                                          .eq('id', addressId)
+                                          .limit(1),
+                                      builder: (context, addrSnap) {
+                                        if (addrSnap.connectionState == ConnectionState.waiting) {
+                                          return Text(AppLocalizations.of(context).addressLoading, style: titleStyle);
+                                        }
+                                        String label = AppLocalizations.of(context).noAddress;
+                                        final data = addrSnap.data;
+                                        if (data is List && data.isNotEmpty) {
+                                          final a = data.first as Map<String, dynamic>;
+                                          final neighborhood = (a['neighborhood'] ?? '').toString().trim();
+                                          final street = (a['street'] ?? '').toString().trim();
+                                          final house = (a['house_number'] ?? '').toString().trim();
+                                          final city = (a['city'] ?? '').toString().trim();
+                                          final left = [neighborhood, street, house].where((p) => p.isNotEmpty).join(' ');
+                                          if (left.isNotEmpty && city.isNotEmpty) {
+                                            label = '$left, $city';
+                                          } else {
+                                            label = left.isNotEmpty ? left : (city.isNotEmpty ? city : AppLocalizations.of(context).noAddress);
+                                          }
+                                        }
+                                        return Text(label, style: titleStyle);
+                                      },
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${AppLocalizations.of(context).date}: ${fmtDate(dateStr)}',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.7)),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${AppLocalizations.of(context).measurementWater}: $wm',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.7)),
+                                ),
+                                if (obs.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    obs,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.6)),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.download_outlined),
+                            color: cs.onSurface.withOpacity(0.75),
+                            onPressed: invoicePath == null
+                                ? null
+                                : () async {
+                                    try {
+                                      final url = await StorageService().createSignedUrl(invoicePath!, const Duration(minutes: 15));
+                                      final ok = await launchUrlString(url, webOnlyWindowName: '_blank');
+                                      if (!ok && context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text(AppLocalizations.of(context).invoiceOpenFailed)),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text(AppLocalizations.of(context).invoiceFetchFailed)),
+                                        );
+                                      }
+                                    }
+                                  },
+                          ),
+                          Icon(Icons.chevron_right, color: cs.onSurface.withOpacity(0.6)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 );
-              }),
+              },
             ),
           ],
         ),
