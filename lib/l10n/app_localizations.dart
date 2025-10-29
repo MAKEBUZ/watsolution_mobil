@@ -24,6 +24,7 @@ class AppLocalizations {
       'homeHistory': 'Historial de Mediciones',
       // Nueva clave para el texto "Medición"
       'measurement': 'Medición',
+      'measurementWater': 'Agua',
       // Users/Measurements page
       'noMeasurements': 'Sin mediciones registradas',
       'errorLoading': 'Error al cargar datos',
@@ -76,6 +77,7 @@ class AppLocalizations {
       'homeHistory': 'Measurement History',
       // New key for "Measurement"
       'measurement': 'Measurement',
+      'measurementWater': 'Water',
       // Users/Measurements page
       'noMeasurements': 'No measurements recorded',
       'errorLoading': 'Error loading data',
@@ -135,6 +137,7 @@ class AppLocalizations {
   String get homeHistory => _get('homeHistory');
   // Getter para "Medición" / "Measurement"
   String get measurement => _get('measurement');
+  String get measurementWater => _get('Water');
   // Users/Measurements page
   String get noMeasurements => _get('noMeasurements');
   String get errorLoading => _get('errorLoading');
