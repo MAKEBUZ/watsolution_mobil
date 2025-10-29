@@ -182,8 +182,8 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
                                         .select('neighborhood, street, house_number, city')
                                         .eq('id', addrId)
                                         .limit(1);
-                                    if (addrList is List && addrList.isNotEmpty) {
-                                      addrData = (addrList.first as Map<String, dynamic>);
+                                    if (addrList.isNotEmpty) {
+                                      addrData = addrList.first;
                                     }
                                   }
 
@@ -196,7 +196,7 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
                                   final personIdStr = personId.toString();
                                   final readingStr = inserted['reading_date']?.toString() ?? fmtDate(readingDate);
                                   final meterIdStr = inserted['id']?.toString() ?? '0';
-                                  final fileName = 'factura_${meterIdStr}_${readingStr}.pdf';
+                                  final fileName = 'factura_${meterIdStr}_$readingStr.pdf';
                                   final path = 'people/$personIdStr/$fileName';
                                   await StorageService().uploadBytes(
                                     path,
@@ -292,8 +292,8 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
             .select('id, full_name, document_number, address_id')
             .eq('id', personId)
             .limit(1);
-        if (personRow is List && personRow.isNotEmpty) {
-          final p = (personRow.first as Map<String, dynamic>);
+        if (personRow.isNotEmpty) {
+          final p = personRow.first;
           userAddressId = p['address_id'] as int?;
         }
         if (userAddressId != null) {
@@ -302,8 +302,8 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
               .select('id, neighborhood, street, house_number, city')
               .eq('id', userAddressId)
               .limit(1);
-          if (addrList is List && addrList.isNotEmpty) {
-            address = (addrList.first as Map<String, dynamic>);
+          if (addrList.isNotEmpty) {
+            address = addrList.first;
           }
         }
       } catch (_) {}
@@ -317,8 +317,8 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
             .eq('people_id', personId)
             .order('reading_date', ascending: false)
             .limit(1);
-        if (lastRows is List && lastRows.isNotEmpty) {
-          final m = (lastRows.first as Map<String, dynamic>);
+        if (lastRows.isNotEmpty) {
+          final m = lastRows.first;
           final obs = m['observation'];
           if (obs != null && obs.toString().trim().isNotEmpty) {
             lastObservation = obs.toString().trim();
@@ -337,13 +337,11 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
               .eq('neighborhood', neighborhood)
               .limit(500);
           final addrIds = <int>[];
-          if (addrIdsRes is List) {
-            for (final a in addrIdsRes) {
-              final id = (a as Map<String, dynamic>)['id'] as int?;
-              if (id != null) addrIds.add(id);
-            }
+          for (final a in addrIdsRes) {
+            final id = (a as Map<String, dynamic>)['id'] as int?;
+            if (id != null) addrIds.add(id);
           }
-          if (addrIds.isNotEmpty) {
+                  if (addrIds.isNotEmpty) {
             final rows2 = await client
                 .from('meters')
                 .select('address_id, water_measure, reading_date')
@@ -384,8 +382,8 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
 
       final isEs = _isEs(context);
       final prompt = isEs
-          ? 'Eres un asistente de consumo de agua para facturación. Con el CONTEXTO estructurado (JSON) que te doy, genera un mensaje CORTO (máx. 2 frases) para la factura: resume el consumo reciente del usuario y compáralo brevemente con el promedio del vecindario si está disponible. Añade una recomendación práctica si aplica. Evita alarmismo y tecnicismos. CONTEXTO:\n' + jsonData
-          : 'You are a water consumption assistant for invoicing. Using the structured CONTEXT (JSON) provided, generate a SHORT message (max 2 sentences) for the invoice: summarize the user\'s recent consumption and briefly compare it to the neighborhood average if available. Add a practical recommendation when appropriate. Avoid alarmism and jargon. CONTEXT:\n' + jsonData;
+          ? 'Eres un asistente de consumo de agua para facturación. Con el CONTEXTO estructurado (JSON) que te doy, genera un mensaje CORTO (máx. 2 frases) para la factura: resume el consumo reciente del usuario y compáralo brevemente con el promedio del vecindario si está disponible. Añade una recomendación práctica si aplica. Evita alarmismo y tecnicismos. CONTEXTO:\n$jsonData'
+          : 'You are a water consumption assistant for invoicing. Using the structured CONTEXT (JSON) provided, generate a SHORT message (max 2 sentences) for the invoice: summarize the user\'s recent consumption and briefly compare it to the neighborhood average if available. Add a practical recommendation when appropriate. Avoid alarmism and jargon. CONTEXT:\n$jsonData';
 
       final apiKey = dotenv.env['OPENAI_API_KEY'];
       if (apiKey == null || apiKey.isEmpty) {
@@ -590,7 +588,7 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
             return Center(
               child: Text(
                 AppLocalizations.of(context).noMeasurements,
-                style: TextStyle(color: cs.onBackground.withOpacity(0.7)),
+                style: TextStyle(color: cs.onSurface.withOpacity(0.7)),
               ),
             );
           }

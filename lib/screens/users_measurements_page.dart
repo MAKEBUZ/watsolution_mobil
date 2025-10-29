@@ -338,7 +338,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
           ),
           // Cerrar sesión (NO IMPLEMENTAR: botón deshabilitado)
           IconButton(
-            tooltip: AppLocalizations.of(context).logout + ' (no activo)',
+            tooltip: '${AppLocalizations.of(context).logout} (no activo)',
             onPressed: null,
             icon: const Icon(Icons.logout),
           ),
@@ -379,7 +379,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
             return Center(
               child: Text(
                 AppLocalizations.of(context).noMeasurements,
-                style: TextStyle(color: cs.onBackground.withOpacity(0.7)),
+                style: TextStyle(color: cs.onSurface.withOpacity(0.7)),
               ),
             );
           }
@@ -388,7 +388,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
             itemCount: users.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
-              final u = users[index] as Map<String, dynamic>;
+              final u = users[index];
               final name = (u['full_name'] ?? '').toString();
               final doc = (u['document_number'] ?? '').toString();
               final status = (u['status'] ?? '').toString();
@@ -501,8 +501,8 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                   final readingLabel = readingDate != null
                                       ? '${readingDate.year}-${readingDate.month.toString().padLeft(2, '0')}-${readingDate.day.toString().padLeft(2, '0')}'
                                       : '—';
-                                  final fileName = 'factura_${meterId}_${readingLabel}.pdf';
-                                  invoicePath = 'people/${personId}/${fileName}';
+                                  final fileName = 'factura_${meterId}_$readingLabel.pdf';
+                                  invoicePath = 'people/$personId/$fileName';
                                 }
 
                                 return Container(
