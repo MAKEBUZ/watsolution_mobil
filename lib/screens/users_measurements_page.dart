@@ -16,9 +16,9 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
   Future<List<dynamic>> _fetchUsersWithMeters() async {
     final client = Supabase.instance.client;
     final res = await client
-        .from('users')
+        .from('people')
         .select(
-            'id, full_name, document_number, status, meters(id, reading_date, water_measure, consumption_m3, observation)')
+            'id, full_name, document_number, status, meters(id, reading_date, water_measure, observation)')
         .order('full_name');
     return res as List<dynamic>;
   }
@@ -51,8 +51,6 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
     final streetCtrl = TextEditingController();
     final houseNumberCtrl = TextEditingController();
     final cityCtrl = TextEditingController();
-    final latitudeCtrl = TextEditingController();
-    final longitudeCtrl = TextEditingController();
 
     bool isSaving = false;
 
@@ -207,25 +205,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                               validator: (v) => (v == null || v.trim().isEmpty) ? loc.requiredField : null,
                             ),
                             const SizedBox(height: 12),
-                            TextFormField(
-                              controller: latitudeCtrl,
-                              textInputAction: TextInputAction.next,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: false),
-                              decoration: InputDecoration(
-                                labelText: loc.latitude,
-                                prefixIcon: const Icon(Icons.explore_outlined),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            TextFormField(
-                              controller: longitudeCtrl,
-                              textInputAction: TextInputAction.done,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: false),
-                              decoration: InputDecoration(
-                                labelText: loc.longitude,
-                                prefixIcon: const Icon(Icons.explore),
-                              ),
-                            ),
+                            // Se eliminan campos de latitud/longitud según requerimiento
                           ],
                         ),
                       ),
@@ -257,8 +237,6 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                     final street = streetCtrl.text.trim();
                                     final houseNumber = houseNumberCtrl.text.trim();
                                     final city = cityCtrl.text.trim();
-                                    final latitude = latitudeCtrl.text.trim();
-                                    final longitude = longitudeCtrl.text.trim();
 
                                     final addrInsert = await client
                                         .from('addresses')
@@ -267,15 +245,13 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                           'street': street.isEmpty ? null : street,
                                           'house_number': houseNumber.isEmpty ? null : houseNumber,
                                           'city': city,
-                                          'latitude': latitude.isEmpty ? null : double.tryParse(latitude),
-                                          'longitude': longitude.isEmpty ? null : double.tryParse(longitude),
                                         })
                                         .select('id')
                                         .single();
 
                                     final addressId = addrInsert['id'] as int;
 
-                                    await client.from('users').insert({
+                                    await client.from('people').insert({
                                       'full_name': fullName,
                                       'document_number': documentNumber,
                                       'phone': phone.isEmpty ? null : phone,
@@ -289,7 +265,10 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(content: Text(loc.userCreated)),
                                       );
-                                      await _refresh();
+                                      // Forzar refresco después de cerrar el modal en el siguiente frame
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        _refresh();
+                                      });
                                     }
                                   } catch (e) {
                                     setInnerState(() => isSaving = false);
