@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter/foundation.dart';
 import '../utils/asset_utils.dart';
 import 'login_page.dart';
 import '../l10n/app_localizations.dart';

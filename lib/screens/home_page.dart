@@ -82,7 +82,12 @@ class HomePage extends StatelessWidget {
           ],
         ),
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none)),
+          IconButton(onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomePage()),
+            );
+          }, icon: const Icon(Icons.refresh)),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
@@ -262,33 +267,27 @@ class HomePage extends StatelessWidget {
                                           color: cs.onSurface,
                                           fontWeight: FontWeight.w600,
                                         );
-                                    if (addressId == null) {
-                                      return Text(AppLocalizations.of(context).noAddress, style: titleStyle);
+                                    if (peopleId == null) {
+                                      return Text('—', style: titleStyle);
                                     }
                                     return FutureBuilder<dynamic>(
                                       future: Supabase.instance.client
-                                          .from('addresses')
-                                          .select('neighborhood, street, house_number, city')
-                                          .eq('id', addressId)
+                                          .from('people')
+                                          .select('full_name, document_number')
+                                          .eq('id', peopleId)
                                           .limit(1),
-                                      builder: (context, addrSnap) {
-                                        if (addrSnap.connectionState == ConnectionState.waiting) {
-                                          return Text(AppLocalizations.of(context).addressLoading, style: titleStyle);
+                                      builder: (context, personSnap) {
+                                        if (personSnap.connectionState == ConnectionState.waiting) {
+                                          return Text('—', style: titleStyle);
                                         }
-                                        String label = AppLocalizations.of(context).noAddress;
-                                        final data = addrSnap.data;
+                                        String label = '—';
+                                        final data = personSnap.data;
                                         if (data is List && data.isNotEmpty) {
-                                          final a = data.first as Map<String, dynamic>;
-                                          final neighborhood = (a['neighborhood'] ?? '').toString().trim();
-                                          final street = (a['street'] ?? '').toString().trim();
-                                          final house = (a['house_number'] ?? '').toString().trim();
-                                          final city = (a['city'] ?? '').toString().trim();
-                                          final left = [neighborhood, street, house].where((p) => p.isNotEmpty).join(' ');
-                                          if (left.isNotEmpty && city.isNotEmpty) {
-                                            label = '$left, $city';
-                                          } else {
-                                            label = left.isNotEmpty ? left : (city.isNotEmpty ? city : AppLocalizations.of(context).noAddress);
-                                          }
+                                          final p = data.first as Map<String, dynamic>;
+                                          final name = (p['full_name'] ?? '').toString().trim();
+                                          final doc = (p['document_number'] ?? '').toString().trim();
+                                          label = [name, doc].where((s) => s.isNotEmpty).join(' • ');
+                                          if (label.isEmpty) label = '—';
                                         }
                                         return Text(label, style: titleStyle);
                                       },
@@ -305,13 +304,42 @@ class HomePage extends StatelessWidget {
                                   '${AppLocalizations.of(context).measurementWater}: $wm',
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.7)),
                                 ),
-                                if (obs.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    obs,
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.6)),
-                                  ),
-                                ],
+                                const SizedBox(height: 4),
+                                // Dirección abajo de la fecha
+                                FutureBuilder<dynamic>(
+                                  future: addressId == null
+                                      ? Future.value(null)
+                                      : Supabase.instance.client
+                                          .from('addresses')
+                                          .select('neighborhood, street, house_number, city')
+                                          .eq('id', addressId)
+                                          .limit(1),
+                                  builder: (context, addrSnap) {
+                                    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: cs.onSurface.withOpacity(0.7),
+                                        );
+                                    if (addrSnap.connectionState == ConnectionState.waiting) {
+                                      return Text('${AppLocalizations.of(context).address}: ${AppLocalizations.of(context).addressLoading}', style: style);
+                                    }
+                                    String addrLabel = AppLocalizations.of(context).noAddress;
+                                    final data = addrSnap.data;
+                                    if (data is List && data.isNotEmpty) {
+                                      final a = data.first as Map<String, dynamic>;
+                                      final neighborhood = (a['neighborhood'] ?? '').toString().trim();
+                                      final street = (a['street'] ?? '').toString().trim();
+                                      final house = (a['house_number'] ?? '').toString().trim();
+                                      final city = (a['city'] ?? '').toString().trim();
+                                      final left = [neighborhood, street, house].where((p) => p.isNotEmpty).join(' ');
+                                      if (left.isNotEmpty && city.isNotEmpty) {
+                                        addrLabel = '$left, $city';
+                                      } else {
+                                        addrLabel = left.isNotEmpty ? left : (city.isNotEmpty ? city : AppLocalizations.of(context).noAddress);
+                                      }
+                                    }
+                                    return Text('${AppLocalizations.of(context).address}: $addrLabel', style: style);
+                                  },
+                                ),
+
                               ],
                             ),
                           ),
@@ -339,7 +367,6 @@ class HomePage extends StatelessWidget {
                                     }
                                   },
                           ),
-                          Icon(Icons.chevron_right, color: cs.onSurface.withOpacity(0.6)),
                         ],
                       ),
                     );

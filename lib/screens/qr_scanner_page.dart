@@ -32,7 +32,7 @@ class _QrScannerPageState extends State<QrScannerPage> {
     if (_showingResult) return;
     final codes = capture.barcodes
         .map((b) => b.rawValue)
-        .where((v) => v != null && v!.isNotEmpty)
+        .where((v) => v != null && v.isNotEmpty)
         .cast<String>()
         .toList();
     if (codes.isEmpty) return;
@@ -166,7 +166,7 @@ class _QrScannerPageState extends State<QrScannerPage> {
               'Apunta al código QR',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: cs.onBackground,
+                    color: cs.onSurface,
                     fontWeight: FontWeight.w500,
                   ),
             ),
