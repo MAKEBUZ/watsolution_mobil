@@ -367,7 +367,6 @@ class HomePage extends StatelessWidget {
                                     }
                                   },
                           ),
-                          Icon(Icons.chevron_right, color: cs.onSurface.withOpacity(0.6)),
                         ],
                       ),
                     );
