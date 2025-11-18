@@ -71,6 +71,11 @@ class AppLocalizations {
       'invoiceUploaded': 'Medición registrada y factura enviada',
       'invoiceOpenFailed': 'No se pudo abrir la factura.',
       'invoiceFetchFailed': 'No se pudo obtener la factura.',
+      // Generic / AI / Validation
+      'invalidUser': 'Usuario no válido.',
+      'missingOpenAIKey': 'Falta OPENAI_API_KEY en .env',
+      'aiGenerateFailed': 'No se pudo generar el mensaje.',
+      'invalidMeasurement': 'Ingrese una medición válida',
     },
     'en': {
       'appTitle': 'WatSolution',
@@ -133,6 +138,11 @@ class AppLocalizations {
       'invoiceUploaded': 'Measurement recorded and invoice uploaded',
       'invoiceOpenFailed': 'Could not open the invoice.',
       'invoiceFetchFailed': 'Could not fetch the invoice.',
+      // Generic / AI / Validation
+      'invalidUser': 'Invalid user.',
+      'missingOpenAIKey': 'Missing OPENAI_API_KEY in .env',
+      'aiGenerateFailed': 'Could not generate the message.',
+      'invalidMeasurement': 'Enter a valid measurement',
     },
   };
 
@@ -163,6 +173,10 @@ class AppLocalizations {
   String get invoiceUploaded => _get('invoiceUploaded');
   String get invoiceOpenFailed => _get('invoiceOpenFailed');
   String get invoiceFetchFailed => _get('invoiceFetchFailed');
+  String get invalidUser => _get('invalidUser');
+  String get missingOpenAIKey => _get('missingOpenAIKey');
+  String get aiGenerateFailed => _get('aiGenerateFailed');
+  String get invalidMeasurement => _get('invalidMeasurement');
   // Users/Measurements page
   String get noMeasurements => _get('noMeasurements');
   String get errorLoading => _get('errorLoading');

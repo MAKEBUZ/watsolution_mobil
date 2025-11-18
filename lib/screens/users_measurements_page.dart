@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher_string.dart';
 import '../l10n/app_localizations.dart';
 import '../app.dart';
 import '../utils/storage_service.dart';
+import '../utils/errors.dart';
 
 class UsersMeasurementsPage extends StatefulWidget {
   const UsersMeasurementsPage({super.key});
@@ -267,7 +268,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                     setInnerState(() => isSaving = false);
                                     if (mounted) {
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text(loc.userCreateError)),
+                                        SnackBar(content: Text(Errors.userCreateError(context))),
                                       );
                                     }
                                   }
@@ -370,7 +371,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  AppLocalizations.of(context).errorLoading,
+                  Errors.errorLoading(context),
                   style: TextStyle(color: cs.error),
                   textAlign: TextAlign.center,
                 ),
@@ -508,7 +509,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                 Builder(builder: (context) {
                                   final addrId = u['address_id'] as int?;
                                   if (addrId == null) {
-                                    return Text(AppLocalizations.of(context).address + ': ' + AppLocalizations.of(context).noAddress,
+                                    return Text('${AppLocalizations.of(context).address}: ${AppLocalizations.of(context).noAddress}',
                                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: tileFg().withOpacity(0.9)));
                                   }
                                   return FutureBuilder<List<Map<String, dynamic>>>(
@@ -571,7 +572,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
-                                            AppLocalizations.of(context).errorLoading,
+                                            Errors.errorLoading(context),
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodyMedium
@@ -691,13 +692,13 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                                         final ok = await launchUrlString(url, webOnlyWindowName: '_blank');
                                                         if (!ok && context.mounted) {
                                                           ScaffoldMessenger.of(context).showSnackBar(
-                                                            SnackBar(content: Text(AppLocalizations.of(context).invoiceOpenFailed)),
+                                                            SnackBar(content: Text(Errors.invoiceOpenFailed(context))),
                                                           );
                                                         }
                                                       } catch (e) {
                                                         if (context.mounted) {
                                                           ScaffoldMessenger.of(context).showSnackBar(
-                                                            SnackBar(content: Text(AppLocalizations.of(context).invoiceFetchFailed)),
+                                                            SnackBar(content: Text(Errors.invoiceFetchFailed(context))),
                                                           );
                                                         }
                                                       }
