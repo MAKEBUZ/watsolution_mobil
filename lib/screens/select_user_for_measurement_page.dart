@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/storage_service.dart';
+import '../utils/errors.dart';
 import '../utils/invoice_pdf.dart';
 import '../l10n/app_localizations.dart';
 
@@ -146,14 +147,14 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
                             : () async {
                                 if (personId == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(loc.errorLoading)),
+                                    SnackBar(content: Text(Errors.errorLoading(context))),
                                   );
                                   return;
                                 }
                                 final wm = double.tryParse(waterCtrl.text.trim());
                                 if (wm == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Ingrese una medición válida')),
+                                    SnackBar(content: Text(Errors.invalidMeasurement(context))),
                                   );
                                   return;
                                 }
@@ -218,13 +219,13 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
                                   if (mounted) {
                                     Navigator.pop(context);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(loc.invoiceUploaded)),
+                                      SnackBar(content: Text(AppLocalizations.of(context).invoiceUploaded)),
                                     );
                                   }
                                 } catch (e) {
                                   setInnerState(() => isSaving = false);
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('${loc.errorLoading}: ${e.toString()}')),
+                                    SnackBar(content: Text('${Errors.errorLoading(context)}: ${e.toString()}')),
                                   );
                                 }
                               },
@@ -260,7 +261,7 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
     try {
       onLoading();
       if (personId == null) {
-        onError(_isEs(context) ? 'Usuario no válido.' : 'Invalid user.');
+        onError(Errors.invalidUser(context));
         return;
       }
       final client = Supabase.instance.client;
@@ -338,7 +339,7 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
               .limit(500);
           final addrIds = <int>[];
           for (final a in addrIdsRes) {
-            final id = (a as Map<String, dynamic>)['id'] as int?;
+            final id = (a)['id'] as int?;
             if (id != null) addrIds.add(id);
           }
                   if (addrIds.isNotEmpty) {
@@ -387,7 +388,7 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
 
       final apiKey = dotenv.env['OPENAI_API_KEY'];
       if (apiKey == null || apiKey.isEmpty) {
-        onError(isEs ? 'Falta OPENAI_API_KEY en .env' : 'Missing OPENAI_API_KEY in .env');
+        onError(Errors.missingOpenAIKey(context));
         return;
       }
       const model = 'gpt-4o-mini';
@@ -447,12 +448,12 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
       }
 
       if (text == null || text.trim().isEmpty) {
-        onResult(isEs ? 'No se pudo generar el mensaje.' : 'Could not generate the message.');
+        onResult(Errors.aiGenerateFailed(context));
       } else {
         onResult(text.trim());
       }
-    } catch (e) {
-      onError(e.toString());
+      } catch (e) {
+      onError(Errors.aiGenerateFailed(context));
     }
   }
 

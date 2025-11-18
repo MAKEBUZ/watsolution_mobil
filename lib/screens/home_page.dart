@@ -7,6 +7,7 @@ import 'users_measurements_page.dart';
 import 'qr_scanner_page.dart';
 import '../utils/storage_service.dart';
 import 'landing_page.dart';
+import '../utils/errors.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -37,7 +38,7 @@ class HomePage extends StatelessWidget {
     Color cardBg() => isDark ? cs.surface : cs.surface;
     Color cardFg() => isDark ? cs.onSurface : cs.onSurface;
 
-    PopupMenuEntry<String> _menuItem({
+    PopupMenuEntry<String> menuItem({
       required String value,
       required String label,
       required bool selected,
@@ -78,7 +79,7 @@ class HomePage extends StatelessWidget {
               child: Icon(Icons.water_drop, color: cs.primary),
             ),
             const SizedBox(width: 12),
-            Text('WatSolution', style: TextStyle(color: cs.onBackground, fontWeight: FontWeight.w600)),
+            Text('WatSolution', style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600)),
           ],
         ),
         actions: [
@@ -122,13 +123,13 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
                 const PopupMenuDivider(),
-                _menuItem(
+                menuItem(
                   value: 'lang_es',
                   label: AppLocalizations.of(context).languageSpanish,
                   icon: Icons.language,
                   selected: currentLang == 'es',
                 ),
-                _menuItem(
+                menuItem(
                   value: 'lang_en',
                   label: AppLocalizations.of(context).languageEnglish,
                   icon: Icons.language,
@@ -181,7 +182,7 @@ class HomePage extends StatelessWidget {
             Text(
               AppLocalizations.of(context).homeHistory,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: cs.onBackground,
+                    color: cs.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
             ),
@@ -197,7 +198,7 @@ class HomePage extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text(
-                        AppLocalizations.of(context).errorLoading,
+                        Errors.errorLoading(context),
                         style: TextStyle(color: cs.error),
                         textAlign: TextAlign.center,
                       ),
@@ -209,7 +210,7 @@ class HomePage extends StatelessWidget {
                   return Center(
                     child: Text(
                       AppLocalizations.of(context).noMeasurements,
-                      style: TextStyle(color: cs.onBackground.withOpacity(0.7)),
+                      style: TextStyle(color: cs.onSurface.withOpacity(0.7)),
                     ),
                   );
                 }
@@ -355,13 +356,13 @@ class HomePage extends StatelessWidget {
                                       final ok = await launchUrlString(url, webOnlyWindowName: '_blank');
                                       if (!ok && context.mounted) {
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text(AppLocalizations.of(context).invoiceOpenFailed)),
+                                          SnackBar(content: Text(Errors.invoiceOpenFailed(context))),
                                         );
                                       }
                                     } catch (e) {
                                       if (context.mounted) {
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text(AppLocalizations.of(context).invoiceFetchFailed)),
+                                          SnackBar(content: Text(Errors.invoiceFetchFailed(context))),
                                         );
                                       }
                                     }
@@ -388,7 +389,6 @@ class _HomeCard extends StatelessWidget {
   final Color fg;
   final VoidCallback? onTap;
   const _HomeCard({
-    super.key,
     required this.title,
     required this.icon,
     required this.bg,
@@ -452,7 +452,7 @@ class _HomeCard extends StatelessWidget {
 class _HistoryItem extends StatelessWidget {
   final ColorScheme cs;
   final bool isDark;
-  const _HistoryItem({super.key, required this.cs, required this.isDark});
+  const _HistoryItem({required this.cs, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -480,7 +480,7 @@ class _HistoryItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppLocalizations.of(context).measurement + ' #' + (DateTime.now().millisecondsSinceEpoch % 10000).toString(),
+                  '${AppLocalizations.of(context).measurement} #${DateTime.now().millisecondsSinceEpoch % 10000}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: cs.onSurface,
                         fontWeight: FontWeight.w600,
