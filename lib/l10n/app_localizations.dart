@@ -71,6 +71,10 @@ class AppLocalizations {
       'invoiceUploaded': 'Medición registrada y factura enviada',
       'invoiceOpenFailed': 'No se pudo abrir la factura.',
       'invoiceFetchFailed': 'No se pudo obtener la factura.',
+      // QR
+      'generateQr': 'Generar QR',
+      'qrGenerated': 'QR generado y subido',
+      'qrGenerateError': 'Error al generar el QR',
     },
     'en': {
       'appTitle': 'WatSolution',
@@ -133,6 +137,10 @@ class AppLocalizations {
       'invoiceUploaded': 'Measurement recorded and invoice uploaded',
       'invoiceOpenFailed': 'Could not open the invoice.',
       'invoiceFetchFailed': 'Could not fetch the invoice.',
+      // QR
+      'generateQr': 'Generate QR',
+      'qrGenerated': 'QR generated and uploaded',
+      'qrGenerateError': 'Error generating QR',
     },
   };
 
@@ -163,6 +171,10 @@ class AppLocalizations {
   String get invoiceUploaded => _get('invoiceUploaded');
   String get invoiceOpenFailed => _get('invoiceOpenFailed');
   String get invoiceFetchFailed => _get('invoiceFetchFailed');
+  // QR
+  String get generateQr => _get('generateQr');
+  String get qrGenerated => _get('qrGenerated');
+  String get qrGenerateError => _get('qrGenerateError');
   // Users/Measurements page
   String get noMeasurements => _get('noMeasurements');
   String get errorLoading => _get('errorLoading');

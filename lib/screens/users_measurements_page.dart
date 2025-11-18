@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher_string.dart';
 import '../l10n/app_localizations.dart';
 import '../app.dart';
 import '../utils/storage_service.dart';
+import '../utils/user_qr_service.dart';
 
 class UsersMeasurementsPage extends StatefulWidget {
   const UsersMeasurementsPage({super.key});
@@ -245,14 +246,23 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
 
                                     final addressId = addrInsert['id'] as int;
 
-                                    await client.from('people').insert({
-                                      'full_name': fullName,
-                                      'document_number': documentNumber,
-                                      'phone': phone.isEmpty ? null : phone,
-                                      'email': email.isEmpty ? null : email,
-                                      'status': 'active',
-                                      'address_id': addressId,
-                                    });
+                                    final insertedPerson = await client
+                                        .from('people')
+                                        .insert({
+                                          'full_name': fullName,
+                                          'document_number': documentNumber,
+                                          'phone': phone.isEmpty ? null : phone,
+                                          'email': email.isEmpty ? null : email,
+                                          'status': 'active',
+                                          'address_id': addressId,
+                                        })
+                                        .select('id')
+                                        .single();
+
+                                    final newPersonId = insertedPerson['id'] as int;
+                                    try {
+                                      await UserQrService.generateAndUpload(personId: newPersonId);
+                                    } catch (_) {}
 
                                     if (mounted) {
                                       Navigator.pop(context);
@@ -425,6 +435,34 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                           ),
                     ),
                     children: [
+                      if (personId != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          child: Row(
+                            children: [
+                              FilledButton.icon(
+                                onPressed: () async {
+                                  try {
+                                    await UserQrService.generateAndUpload(personId: personId);
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(AppLocalizations.of(context).qrGenerated)),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(AppLocalizations.of(context).qrGenerateError)),
+                                      );
+                                    }
+                                  }
+                                },
+                                icon: const Icon(Icons.qr_code_2),
+                                label: Text(AppLocalizations.of(context).generateQr),
+                              ),
+                            ],
+                          ),
+                        ),
                       StreamBuilder<List<Map<String, dynamic>>>(
                         stream: personId == null
                             ? null
