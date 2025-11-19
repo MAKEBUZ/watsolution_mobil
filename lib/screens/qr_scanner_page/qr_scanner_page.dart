@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../l10n/app_localizations.dart';
-import '../app.dart';
-import 'select_user_for_measurement_page.dart';
+import '../../l10n/app_localizations.dart';
+import '../../app.dart';
+import '../select_user_for_measurement_page/select_user_for_measurement_page.dart';
+import './qr_scanner_page_functions.dart';
 
 class QrScannerPage extends StatefulWidget {
   const QrScannerPage({super.key});
@@ -30,13 +31,9 @@ class _QrScannerPageState extends State<QrScannerPage> {
 
   void _onDetect(BarcodeCapture capture) async {
     if (_showingResult) return;
-    final codes = capture.barcodes
-        .map((b) => b.rawValue)
-        .where((v) => v != null && v.isNotEmpty)
-        .cast<String>()
-        .toList();
-    if (codes.isEmpty) return;
-    _lastCode = codes.first;
+    final code = QrScannerPageFunctions.extractFirstCode(capture);
+    if (code == null) return;
+    _lastCode = code;
     _showingResult = true;
     if (!mounted) return;
     await showModalBottomSheet(
@@ -152,7 +149,7 @@ class _QrScannerPageState extends State<QrScannerPage> {
                 height: 260,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: cs.primary.withOpacity(0.9), width: 2),
+                  border: Border.all(color: cs.primary.withValues(alpha: 0.9), width: 2),
                 ),
               ),
             ),
