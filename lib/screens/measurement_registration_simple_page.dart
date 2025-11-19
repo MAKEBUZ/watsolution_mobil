@@ -4,10 +4,16 @@ import '../services/local_database/unified_database_service.dart';
 
 class MeasurementRegistrationSimplePage extends StatefulWidget {
   final int userId;
+  final double? initialWaterMeasure;
+  final String? initialObservation;
+  final DateTime? initialReadingDate;
   
   const MeasurementRegistrationSimplePage({
     super.key, 
     required this.userId,
+    this.initialWaterMeasure,
+    this.initialObservation,
+    this.initialReadingDate,
   });
 
   @override
@@ -30,6 +36,14 @@ class _MeasurementRegistrationSimplePageState extends State<MeasurementRegistrat
     super.initState();
     _checkConnectivity();
     _loadUserData();
+    final wm = widget.initialWaterMeasure;
+    if (wm != null) {
+      _waterMeasureController.text = wm.toString();
+    }
+    final obs = widget.initialObservation;
+    if (obs != null && obs.isNotEmpty) {
+      _observationController.text = obs;
+    }
   }
 
   Future<void> _checkConnectivity() async {
@@ -96,7 +110,7 @@ class _MeasurementRegistrationSimplePageState extends State<MeasurementRegistrat
     try {
       final waterMeasure = double.parse(_waterMeasureController.text);
       final observation = _observationController.text.isEmpty ? null : _observationController.text;
-      final readingDate = DateTime.now();
+      final readingDate = widget.initialReadingDate ?? DateTime.now();
 
       await _unifiedService.createMeter(
         personId: widget.userId,
@@ -266,7 +280,7 @@ class _MeasurementRegistrationSimplePageState extends State<MeasurementRegistrat
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Fecha: ${_formatDate(DateTime.now())}',
+                        'Fecha: ${_formatDate(widget.initialReadingDate ?? DateTime.now())}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: cs.onSurface.withValues(alpha: 0.7),
                             ),

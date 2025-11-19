@@ -5,7 +5,10 @@ import './ai_suggestion_block.dart';
 
 class MeasurementFormSheet extends StatefulWidget {
   final Map<String, dynamic> person;
-  const MeasurementFormSheet({required this.person, super.key});
+  final double? initialWaterMeasure;
+  final String? initialObservation;
+  final DateTime? initialReadingDate;
+  const MeasurementFormSheet({required this.person, this.initialWaterMeasure, this.initialObservation, this.initialReadingDate, super.key});
 
   @override
   State<MeasurementFormSheet> createState() => _MeasurementFormSheetState();
@@ -14,8 +17,22 @@ class MeasurementFormSheet extends StatefulWidget {
 class _MeasurementFormSheetState extends State<MeasurementFormSheet> {
   final TextEditingController _waterCtrl = TextEditingController();
   final TextEditingController _obsCtrl = TextEditingController();
-  final DateTime _readingDate = DateTime.now();
+  late DateTime _readingDate;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _readingDate = widget.initialReadingDate ?? DateTime.now();
+    final wm = widget.initialWaterMeasure;
+    if (wm != null) {
+      _waterCtrl.text = wm.toString();
+    }
+    final obs = widget.initialObservation;
+    if (obs != null && obs.isNotEmpty) {
+      _obsCtrl.text = obs;
+    }
+  }
 
   @override
   void dispose() {
@@ -64,6 +81,8 @@ class _MeasurementFormSheetState extends State<MeasurementFormSheet> {
         children: [
           Text([name, doc].where((s) => s.isNotEmpty).join(' • '), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
+          Text('${AppLocalizations.of(context).date}: ${_readingDate.year}-${_readingDate.month.toString().padLeft(2, '0')}-${_readingDate.day.toString().padLeft(2, '0')}',
+              style: Theme.of(context).textTheme.bodySmall),
           TextField(
             controller: _waterCtrl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
