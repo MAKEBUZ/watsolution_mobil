@@ -8,6 +8,8 @@ import '../../utils/errors.dart';
 import '../../utils/invoice_pdf.dart';
 import '../../l10n/app_localizations.dart';
 import './select_user_for_measurement_page_functions.dart';
+import './widgets/measurement_form_sheet.dart';
+import './widgets/people_list.dart';
 
 class SelectUserForMeasurementPage extends StatefulWidget {
   const SelectUserForMeasurementPage({super.key});
@@ -569,63 +571,7 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
       appBar: AppBar(
         title: Text(AppLocalizations.of(context).homeUsers),
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _peopleStream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  AppLocalizations.of(context).errorLoading,
-                  style: TextStyle(color: cs.error),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
-          final people = snapshot.data ?? [];
-          if (people.isEmpty) {
-            return Center(
-              child: Text(
-                AppLocalizations.of(context).noMeasurements,
-                style: TextStyle(color: cs.onSurface.withOpacity(0.7)),
-              ),
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: people.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final u = people[index];
-              final name = (u['full_name'] ?? '').toString();
-              final doc = (u['document_number'] ?? '').toString();
-              final status = (u['status'] ?? '').toString();
-
-              return ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                leading: CircleAvatar(
-                  backgroundColor: cs.primary.withOpacity(0.15),
-                  foregroundColor: cs.primary,
-                  child: const Icon(Icons.person_outline),
-                ),
-                title: Text(name.isEmpty ? '—' : name),
-                subtitle: Text('Doc: ${doc.isEmpty ? '—' : doc} · ${status.isEmpty ? '—' : status}'),
-                trailing: FilledButton.icon(
-                  onPressed: () => _openMeasurementForm(u),
-                  icon: const Icon(Icons.water_drop_outlined),
-                  label: const Text('Registrar medición'),
-                ),
-                onTap: () => _openMeasurementForm(u),
-              );
-            },
-          );
-        },
-      ),
+      body: PeopleList(stream: _peopleStream, onOpenMeasurementForm: _openMeasurementForm),
     );
   }
 }

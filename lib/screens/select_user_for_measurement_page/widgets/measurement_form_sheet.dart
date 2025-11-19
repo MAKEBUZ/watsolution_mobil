@@ -31,20 +31,22 @@ class _MeasurementFormSheetState extends State<MeasurementFormSheet> {
       final personId = widget.person['id'] as int?;
       final addressId = widget.person['address_id'] as int?;
       final waterMeasure = double.tryParse(_waterCtrl.text.trim());
-      final ok = await SelectUserForMeasurementFunctions.saveMeasurementAndInvoice(
-        context,
-        personId: personId,
+      if (waterMeasure == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).invalidMeasurement)));
+        }
+        return;
+      }
+      final _ = await SelectUserForMeasurementFunctions.saveMeasurementAndInvoice(
+        person: widget.person,
         addressId: addressId,
         waterMeasure: waterMeasure,
         readingDate: _readingDate,
         observation: _obsCtrl.text.trim().isEmpty ? null : _obsCtrl.text.trim(),
       );
       if (context.mounted) {
-        if (ok) {
-          Navigator.of(context).pop(true);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).saveFailed)));
-        }
+        Navigator.of(context).pop(true);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).invoiceUploaded)));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -53,7 +55,6 @@ class _MeasurementFormSheetState extends State<MeasurementFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final name = (widget.person['full_name'] ?? '').toString();
     final doc = (widget.person['document_number'] ?? '').toString();
     final personId = widget.person['id'] as int?;
@@ -74,7 +75,7 @@ class _MeasurementFormSheetState extends State<MeasurementFormSheet> {
           TextField(
             controller: _obsCtrl,
             maxLines: 3,
-            decoration: InputDecoration(labelText: AppLocalizations.of(context).observationOptional),
+            decoration: const InputDecoration(labelText: 'Observación (opcional)'),
           ),
           const SizedBox(height: 12),
           AiSuggestionBlock(personId: personId, name: name, document: doc, obsCtrl: _obsCtrl),

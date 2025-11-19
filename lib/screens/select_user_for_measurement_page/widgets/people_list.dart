@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/errors.dart';
+import './measurement_form_sheet.dart';
 
 class PeopleList extends StatelessWidget {
   final Stream<List<Map<String, dynamic>>> stream;
@@ -21,7 +22,7 @@ class PeopleList extends StatelessWidget {
         }
         final people = snapshot.data ?? [];
         if (people.isEmpty) {
-          return Center(child: Text(AppLocalizations.of(context).noUsers));
+          return Center(child: Text(AppLocalizations.of(context).noMeasurements));
         }
         return ListView.separated(
           shrinkWrap: true,
@@ -35,7 +36,21 @@ class PeopleList extends StatelessWidget {
             final label = [name, doc].where((s) => s.isNotEmpty).join(' • ');
             return ListTile(
               title: Text(label.isEmpty ? '—' : label),
-              trailing: IconButton(icon: const Icon(Icons.water_drop_outlined), onPressed: () => onOpenMeasurementForm(p)),
+              trailing: IconButton(
+                icon: const Icon(Icons.water_drop_outlined),
+                onPressed: () async {
+                  final cs2 = Theme.of(context).colorScheme;
+                  await showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: cs2.surface,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                    ),
+                    builder: (context) => MeasurementFormSheet(person: p),
+                  );
+                },
+              ),
             );
           },
         );
