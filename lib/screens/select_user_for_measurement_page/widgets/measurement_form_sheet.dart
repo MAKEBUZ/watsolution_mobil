@@ -28,7 +28,6 @@ class _MeasurementFormSheetState extends State<MeasurementFormSheet> {
     if (_saving) return;
     setState(() => _saving = true);
     try {
-      final personId = widget.person['id'] as int?;
       final addressId = widget.person['address_id'] as int?;
       final waterMeasure = double.tryParse(_waterCtrl.text.trim());
       if (waterMeasure == null) {
@@ -44,10 +43,9 @@ class _MeasurementFormSheetState extends State<MeasurementFormSheet> {
         readingDate: _readingDate,
         observation: _obsCtrl.text.trim().isEmpty ? null : _obsCtrl.text.trim(),
       );
-      if (context.mounted) {
-        Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).invoiceUploaded)));
-      }
+      if (!context.mounted) return;
+      Navigator.of(context).pop(true);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).invoiceUploaded)));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

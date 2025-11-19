@@ -45,7 +45,7 @@ class _UsersListState extends State<UsersList> {
           return Center(
             child: Text(
               AppLocalizations.of(context).noMeasurements,
-              style: TextStyle(color: cs.onSurface.withOpacity(0.7)),
+              style: TextStyle(color: cs.onSurface.withValues(alpha: 0.7)),
             ),
           );
         }
@@ -90,7 +90,7 @@ class _UsersListState extends State<UsersList> {
                                 child: Row(
                                   children: [
                                     CircleAvatar(
-                                      backgroundColor: cs.primary.withOpacity(0.15),
+                                      backgroundColor: cs.primary.withValues(alpha: 0.15),
                                       foregroundColor: cs.primary,
                                       child: const Icon(Icons.person_outline),
                                     ),
@@ -105,7 +105,7 @@ class _UsersListState extends State<UsersList> {
                                           const SizedBox(height: 2),
                                           Text('Doc: ${doc.isEmpty ? '—' : doc} · ${status.isEmpty ? '—' : status}',
                                               style: Theme.of(context).textTheme.bodySmall
-                                                  ?.copyWith(color: tileFg().withOpacity(0.7))),
+                                                  ?.copyWith(color: tileFg().withValues(alpha: 0.7))),
                                         ],
                                       ),
                                     ),
@@ -152,16 +152,16 @@ class _UsersListState extends State<UsersList> {
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodyMedium
-                                      ?.copyWith(color: tileFg().withOpacity(0.9))),
+                                      ?.copyWith(color: tileFg().withValues(alpha: 0.9))),
                               const SizedBox(height: 4),
                               Text(
                                 '${AppLocalizations.of(context).phone}: ${(u['phone'] ?? '—').toString()}',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: tileFg().withOpacity(0.9)),
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: tileFg().withValues(alpha: 0.9)),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 '${AppLocalizations.of(context).email}: ${(u['email'] ?? '—').toString()}',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: tileFg().withOpacity(0.9)),
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: tileFg().withValues(alpha: 0.9)),
                               ),
                               const SizedBox(height: 4),
                               Builder(builder: (context) {
@@ -191,7 +191,7 @@ class _UsersListState extends State<UsersList> {
                                       }
                                     }
                                     return Text('${AppLocalizations.of(context).address}: $label',
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: tileFg().withOpacity(0.9)));
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: tileFg().withValues(alpha: 0.9)));
                                   },
                                 );
                               }),
@@ -222,13 +222,13 @@ class _UsersListState extends State<UsersList> {
                                   padding: const EdgeInsets.all(12),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.error_outline, color: tileFg().withOpacity(0.7)),
+                                      Icon(Icons.error_outline, color: tileFg().withValues(alpha: 0.7)),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
                                           Errors.errorLoading(context),
                                           style: Theme.of(context).textTheme.bodyMedium
-                                              ?.copyWith(color: tileFg().withOpacity(0.8)),
+                                              ?.copyWith(color: tileFg().withValues(alpha: 0.8)),
                                         ),
                                       ),
                                     ],
@@ -241,12 +241,12 @@ class _UsersListState extends State<UsersList> {
                                   padding: const EdgeInsets.all(12),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.info_outline, color: tileFg().withOpacity(0.7)),
+                                      Icon(Icons.info_outline, color: tileFg().withValues(alpha: 0.7)),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(AppLocalizations.of(context).noMeasurements,
                                             style: Theme.of(context).textTheme.bodyMedium
-                                                ?.copyWith(color: tileFg().withOpacity(0.8))),
+                                                ?.copyWith(color: tileFg().withValues(alpha: 0.8))),
                                       ),
                                     ],
                                   ),
@@ -288,7 +288,7 @@ class _UsersListState extends State<UsersList> {
                                           height: 40,
                                           width: 52,
                                           decoration: BoxDecoration(
-                                            color: cs.primary.withOpacity(0.15),
+                                            color: cs.primary.withValues(alpha: 0.15),
                                             borderRadius: BorderRadius.circular(10),
                                           ),
                                           child: Icon(Icons.stacked_line_chart, color: cs.primary),
@@ -308,7 +308,7 @@ class _UsersListState extends State<UsersList> {
                                                 style: Theme.of(context)
                                                     .textTheme
                                                     .bodySmall
-                                                    ?.copyWith(color: tileFg().withOpacity(0.75)),
+                                                    ?.copyWith(color: tileFg().withValues(alpha: 0.75)),
                                               ),
                                               const SizedBox(height: 2),
                                               if (obs.trim().isNotEmpty)
@@ -317,7 +317,7 @@ class _UsersListState extends State<UsersList> {
                                                   style: Theme.of(context)
                                                       .textTheme
                                                       .bodySmall
-                                                      ?.copyWith(color: tileFg().withOpacity(0.6)),
+                                                      ?.copyWith(color: tileFg().withValues(alpha: 0.6)),
                                                 ),
                                             ],
                                           ),
@@ -325,7 +325,7 @@ class _UsersListState extends State<UsersList> {
                                         const SizedBox(width: 8),
                                         IconButton(
                                           icon: const Icon(Icons.download_outlined),
-                                          color: tileFg().withOpacity(0.75),
+                                          color: tileFg().withValues(alpha: 0.75),
                                           onPressed: invoicePath == null
                                               ? null
                                               : () async {

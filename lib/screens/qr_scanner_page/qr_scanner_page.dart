@@ -149,7 +149,7 @@ class _QrScannerPageState extends State<QrScannerPage> {
                 height: 260,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: cs.primary.withOpacity(0.9), width: 2),
+                  border: Border.all(color: cs.primary.withValues(alpha: 0.9), width: 2),
                 ),
               ),
             ),

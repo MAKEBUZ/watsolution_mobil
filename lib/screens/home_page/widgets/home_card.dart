@@ -21,7 +21,7 @@ class HomeCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: cs.primary.withOpacity(0.05),
+              color: cs.primary.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -32,7 +32,7 @@ class HomeCard extends StatelessWidget {
             Positioned(
               right: 12,
               bottom: 12,
-              child: Icon(icon, color: cs.primary.withOpacity(0.7), size: 28),
+              child: Icon(icon, color: cs.primary.withValues(alpha: 0.7), size: 28),
             ),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -49,7 +49,7 @@ class HomeCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     ' ',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: fg.withOpacity(0.6)),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: fg.withValues(alpha: 0.6)),
                   ),
                 ],
               ),

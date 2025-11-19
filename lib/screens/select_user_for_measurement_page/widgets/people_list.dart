@@ -5,8 +5,7 @@ import './measurement_form_sheet.dart';
 
 class PeopleList extends StatelessWidget {
   final Stream<List<Map<String, dynamic>>> stream;
-  final void Function(Map<String, dynamic>) onOpenMeasurementForm;
-  const PeopleList({required this.stream, required this.onOpenMeasurementForm, super.key});
+  const PeopleList({required this.stream, super.key});
 
   @override
   Widget build(BuildContext context) {

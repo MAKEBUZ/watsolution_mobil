@@ -201,20 +201,17 @@ class _CreateUserFormSheetState extends State<CreateUserFormSheet> {
                               email: email.isEmpty ? null : email,
                               addressId: addressId,
                             );
-
-                            if (mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(loc.userCreated)),
-                              );
-                            }
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(loc.userCreated)),
+                            );
                           } catch (e) {
                             setState(() => _saving = false);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(Errors.userCreateError(context))),
-                              );
-                            }
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(Errors.userCreateError(context))),
+                            );
                           }
                         },
                   icon: const Icon(Icons.save_outlined),

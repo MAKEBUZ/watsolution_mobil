@@ -44,7 +44,7 @@ class HomeHistoryList extends StatelessWidget {
           return Center(
             child: Text(
               AppLocalizations.of(context).noMeasurements,
-              style: TextStyle(color: cs.onSurface.withOpacity(0.7)),
+              style: TextStyle(color: cs.onSurface.withValues(alpha: 0.7)),
             ),
           );
         }
@@ -76,7 +76,7 @@ class HomeHistoryList extends StatelessWidget {
                     height: 48,
                     width: 72,
                     decoration: BoxDecoration(
-                      color: cs.primary.withOpacity(0.15),
+                      color: cs.primary.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(Icons.stacked_line_chart, color: cs.primary),
@@ -122,12 +122,12 @@ class HomeHistoryList extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '${AppLocalizations.of(context).date}: ${_fmtDate(dateStr)}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.7)),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.7)),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '${AppLocalizations.of(context).measurementWater}: $wm',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.7)),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.7)),
                         ),
                         const SizedBox(height: 4),
                         FutureBuilder<dynamic>(
@@ -140,7 +140,7 @@ class HomeHistoryList extends StatelessWidget {
                                   .limit(1),
                           builder: (context, addrSnap) {
                             final style = Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: cs.onSurface.withOpacity(0.7),
+                                  color: cs.onSurface.withValues(alpha: 0.7),
                                 );
                             if (addrSnap.connectionState == ConnectionState.waiting) {
                               return Text('${AppLocalizations.of(context).address}: ${AppLocalizations.of(context).addressLoading}', style: style);
@@ -169,7 +169,7 @@ class HomeHistoryList extends StatelessWidget {
                   const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(Icons.download_outlined),
-                    color: cs.onSurface.withOpacity(0.75),
+                    color: cs.onSurface.withValues(alpha: 0.75),
                     onPressed: invoicePath == null
                         ? null
                         : () async {

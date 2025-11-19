@@ -61,8 +61,8 @@ class _LandingPageState extends State<LandingPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.2),
-                    Colors.black.withOpacity(0.6),
+                    Colors.black.withValues(alpha: 0.2),
+                    Colors.black.withValues(alpha: 0.6),
                   ],
                 ),
               ),
@@ -110,7 +110,7 @@ class _LandingPageState extends State<LandingPage> {
                   Text(
                     AppLocalizations.of(context).landingDescription,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.85),
+                      color: Colors.white.withValues(alpha: 0.85),
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
                     ),

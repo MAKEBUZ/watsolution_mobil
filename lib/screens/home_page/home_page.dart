@@ -37,7 +37,7 @@ class HomePage extends StatelessWidget {
       required bool selected,
       required IconData icon,
     }) {
-      final bg = selected ? (isDark ? cs.primary.withOpacity(0.15) : cs.primary.withOpacity(0.15)) : Colors.transparent;
+      final bg = selected ? (isDark ? cs.primary.withValues(alpha: 0.15) : cs.primary.withValues(alpha: 0.15)) : Colors.transparent;
       final fg = selected ? cs.primary : cs.onSurface;
       return PopupMenuItem<String>(
         value: value,
@@ -68,7 +68,7 @@ class HomePage extends StatelessWidget {
             const SizedBox(width: 16),
             CircleAvatar(
               radius: 16,
-              backgroundColor: cs.primary.withOpacity(0.2),
+              backgroundColor: cs.primary.withValues(alpha: 0.2),
               child: Icon(Icons.water_drop, color: cs.primary),
             ),
             const SizedBox(width: 12),
