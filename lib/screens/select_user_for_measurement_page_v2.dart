@@ -3,7 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'dart:convert';
 import '../../l10n/app_localizations.dart';
 import '../../services/local_database/unified_database_service.dart';
-import 'user_selection_for_measurement_page.dart';
+import 'measurement_registration_simple_page.dart';
 
 class SelectUserForMeasurementPageV2 extends StatefulWidget {
   const SelectUserForMeasurementPageV2({super.key});
@@ -52,11 +52,14 @@ class _SelectUserForMeasurementPageV2State extends State<SelectUserForMeasuremen
       );
 
       if (result != null && mounted) {
-        // Ir directamente a la página de registro con el usuario escaneado
-        Navigator.push(
+        // Obtener el ID del usuario del resultado
+        final userId = result['id'] as int;
+        
+        // Ir directamente a la página de registro simplificada
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => MeasurementRegistrationPageWithUser(userData: result),
+            builder: (context) => MeasurementRegistrationSimplePage(userId: userId),
           ),
         );
       }
@@ -71,10 +74,13 @@ class _SelectUserForMeasurementPageV2State extends State<SelectUserForMeasuremen
 
   // Función para seleccionar usuario de la lista
   void _selectUser(Map<String, dynamic> user) {
-    Navigator.push(
+    // Obtener el ID del usuario seleccionado
+    final userId = user['id'] as int;
+    
+    Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => MeasurementRegistrationPageWithUser(userData: user),
+        builder: (context) => MeasurementRegistrationSimplePage(userId: userId),
       ),
     );
   }
