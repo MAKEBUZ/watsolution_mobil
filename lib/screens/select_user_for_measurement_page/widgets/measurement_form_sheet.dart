@@ -14,7 +14,7 @@ class MeasurementFormSheet extends StatefulWidget {
 class _MeasurementFormSheetState extends State<MeasurementFormSheet> {
   final TextEditingController _waterCtrl = TextEditingController();
   final TextEditingController _obsCtrl = TextEditingController();
-  DateTime _readingDate = DateTime.now();
+  final DateTime _readingDate = DateTime.now();
   bool _saving = false;
 
   @override
@@ -28,12 +28,13 @@ class _MeasurementFormSheetState extends State<MeasurementFormSheet> {
     if (_saving) return;
     setState(() => _saving = true);
     try {
+      final messenger = ScaffoldMessenger.of(context);
+      final loc = AppLocalizations.of(context);
+      final navigator = Navigator.of(context);
       final addressId = widget.person['address_id'] as int?;
       final waterMeasure = double.tryParse(_waterCtrl.text.trim());
       if (waterMeasure == null) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).invalidMeasurement)));
-        }
+        messenger.showSnackBar(SnackBar(content: Text(loc.invalidMeasurement)));
         return;
       }
       final _ = await SelectUserForMeasurementFunctions.saveMeasurementAndInvoice(
@@ -43,9 +44,8 @@ class _MeasurementFormSheetState extends State<MeasurementFormSheet> {
         readingDate: _readingDate,
         observation: _obsCtrl.text.trim().isEmpty ? null : _obsCtrl.text.trim(),
       );
-      if (!context.mounted) return;
-      Navigator.of(context).pop(true);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).invoiceUploaded)));
+      navigator.pop(true);
+      messenger.showSnackBar(SnackBar(content: Text(loc.invoiceUploaded)));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

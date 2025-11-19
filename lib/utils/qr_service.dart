@@ -22,8 +22,6 @@ class QrService {
       data: payload,
       version: QrVersions.auto,
       gapless: true,
-      color: const Color(0xFF000000),
-      emptyColor: const Color(0xFFFFFFFF),
     );
     final bd = await painter.toImageData(1024, format: ImageByteFormat.png);
     return bd!.buffer.asUint8List();
@@ -39,7 +37,7 @@ class QrService {
     if (rows.isEmpty) {
       throw Exception('invalid_user');
     }
-    final person = rows.first as Map<String, dynamic>;
+    final Map<String, dynamic> person = rows.first;
     Map<String, dynamic>? address;
     final addrId = person['address_id'] as int?;
     if (addrId != null) {
@@ -49,7 +47,7 @@ class QrService {
           .eq('id', addrId)
           .limit(1);
       if (addrList.isNotEmpty) {
-        address = addrList.first as Map<String, dynamic>;
+        address = addrList.first;
       }
     }
     final pngBytes = await _buildUserQrPng(person, address);
