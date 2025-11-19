@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../users_measurements_page_functions.dart';
+import '../../../utils/qr_service.dart';
 import '../../../utils/errors.dart';
 
 class CreateUserFormSheet extends StatefulWidget {
@@ -194,13 +195,16 @@ class _CreateUserFormSheetState extends State<CreateUserFormSheet> {
                               city: city,
                             );
 
-                            await UsersMeasurementsPageFunctions.createUser(
+                            final personId = await UsersMeasurementsPageFunctions.createUser(
                               fullName: fullName,
                               documentNumber: documentNumber,
                               phone: phone.isEmpty ? null : phone,
                               email: email.isEmpty ? null : email,
                               addressId: addressId,
                             );
+                            try {
+                              await QrService.createAndUploadUserQr(personId: personId);
+                            } catch (_) {}
                             if (!context.mounted) return;
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -215,7 +219,7 @@ class _CreateUserFormSheetState extends State<CreateUserFormSheet> {
                           }
                         },
                   icon: const Icon(Icons.save_outlined),
-                  label: Text(loc.save),
+  label: Text(loc.save),
                 ),
               ],
             ),

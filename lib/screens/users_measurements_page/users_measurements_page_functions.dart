@@ -21,15 +21,20 @@ class UsersMeasurementsPageFunctions {
     return addrInsert['id'] as int;
   }
 
-  static Future<void> createUser({required String fullName, required String documentNumber, String? phone, String? email, required int addressId}) async {
+  static Future<int> createUser({required String fullName, required String documentNumber, String? phone, String? email, required int addressId}) async {
     final client = Supabase.instance.client;
-    await client.from('people').insert({
-      'full_name': fullName,
-      'document_number': documentNumber,
-      'phone': phone?.isEmpty == true ? null : phone,
-      'email': email?.isEmpty == true ? null : email,
-      'status': 'active',
-      'address_id': addressId,
-    });
+    final inserted = await client
+        .from('people')
+        .insert({
+          'full_name': fullName,
+          'document_number': documentNumber,
+          'phone': phone?.isEmpty == true ? null : phone,
+          'email': email?.isEmpty == true ? null : email,
+          'status': 'active',
+          'address_id': addressId,
+        })
+        .select('id')
+        .single();
+    return inserted['id'] as int;
   }
 }
