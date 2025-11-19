@@ -3,10 +3,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../utils/storage_service.dart';
-import '../utils/errors.dart';
-import '../utils/invoice_pdf.dart';
-import '../l10n/app_localizations.dart';
+import '../../utils/storage_service.dart';
+import '../../utils/errors.dart';
+import '../../utils/invoice_pdf.dart';
+import '../../l10n/app_localizations.dart';
+import './select_user_for_measurement_page_functions.dart';
 
 class SelectUserForMeasurementPage extends StatefulWidget {
   const SelectUserForMeasurementPage({super.key});
@@ -486,27 +487,29 @@ class _SelectUserForMeasurementPageState extends State<SelectUserForMeasurementP
               TextButton.icon(
                 onPressed: _aiLoading
                     ? null
-                    : () {
-                        _loadAiSuggestion(
-                          context: context,
-                          setState: setState,
-                          personId: personId,
-                          name: name,
-                          document: document,
-                          onLoading: () => setState(() {
-                            _aiLoading = true;
-                            _aiError = null;
-                            _aiText = null;
-                          }),
-                          onResult: (t) => setState(() {
+                    : () async {
+                        setState(() {
+                          _aiLoading = true;
+                          _aiError = null;
+                          _aiText = null;
+                        });
+                        try {
+                          final t = await SelectUserForMeasurementFunctions.generateAiSuggestion(
+                            context,
+                            personId: personId,
+                            name: name,
+                            document: document,
+                          );
+                          setState(() {
                             _aiLoading = false;
                             _aiText = t;
-                          }),
-                          onError: (e) => setState(() {
+                          });
+                        } catch (e) {
+                          setState(() {
                             _aiLoading = false;
-                            _aiError = e;
-                          }),
-                        );
+                            _aiError = Errors.aiGenerateFailed(context);
+                          });
+                        }
                       },
                 icon: _aiLoading
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))

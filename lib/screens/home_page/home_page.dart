@@ -1,33 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-import '../app.dart';
-import '../l10n/app_localizations.dart';
-import 'users_measurements_page.dart';
-import 'qr_scanner_page.dart';
-import '../utils/storage_service.dart';
-import 'landing_page.dart';
-import '../utils/errors.dart';
+import '../../app.dart';
+import '../../l10n/app_localizations.dart';
+import '../users_measurements_page/users_measurements_page.dart';
+import './home_page_functions.dart';
+import '../qr_scanner_page/qr_scanner_page.dart';
+import '../../utils/storage_service.dart';
+import '../landing_page/landing_page.dart';
+import '../../utils/errors.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   void _logout(BuildContext context) async {
-    await Supabase.instance.client.auth.signOut();
-    if (context.mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => LandingPage()),
-        (route) => false,
-      );
-    }
+    await HomePageFunctions.logout(context);
   }
 
   Stream<List<Map<String, dynamic>>> _streamRecentMeters() {
-    return Supabase.instance.client
-        .from('meters')
-        .stream(primaryKey: ['id'])
-        .order('reading_date', ascending: false)
-        .limit(20);
+    return HomePageFunctions.streamRecentMeters();
   }
 
   @override
@@ -352,8 +343,7 @@ class HomePage extends StatelessWidget {
                                 ? null
                                 : () async {
                                     try {
-                                      final url = await StorageService().createSignedUrl(invoicePath!, const Duration(minutes: 15));
-                                      final ok = await launchUrlString(url, webOnlyWindowName: '_blank');
+                                      final ok = await HomePageFunctions.openInvoice(invoicePath!);
                                       if (!ok && context.mounted) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(content: Text(Errors.invoiceOpenFailed(context))),

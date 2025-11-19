@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../utils/asset_utils.dart';
-import 'login_page.dart';
-import '../l10n/app_localizations.dart';
+import '../../utils/asset_utils.dart';
+import './landing_page_functions.dart';
+import '../login_page/login_page.dart';
+import '../../l10n/app_localizations.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -24,16 +25,13 @@ class _LandingPageState extends State<LandingPage> {
   }
 
   Future<void> _initAssets() async {
-    // final bgJpg = await assetExists('assets/images/landing_bg.jpg'); // no usar JPG
-    final bgPng = await assetExists('assets/images/landing_bg.png');
-    final bgSvg = await assetExists('assets/images/landing_bg.svg');
-    final logo = await assetExists('assets/logo/logo.svg');
+    final r = await LandingPageFunctions.initAssets();
     if (mounted) {
       setState(() {
-        _hasBg = false; // no usar JPG
-        _hasBgPng = bgPng;
-        _hasBgSvg = bgSvg;
-        _hasLogo = logo;
+        _hasBg = false;
+        _hasBgPng = r.hasBgPng;
+        _hasBgSvg = r.hasBgSvg;
+        _hasLogo = r.hasLogo;
       });
     }
   }

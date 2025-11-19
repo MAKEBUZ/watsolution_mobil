@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/landing_page.dart';
-import 'screens/home_page.dart';
+import 'screens/landing_page/landing_page.dart';
+import 'screens/home_page/home_page.dart';
 import 'l10n/app_localizations.dart';
 
 class AppState extends ChangeNotifier {

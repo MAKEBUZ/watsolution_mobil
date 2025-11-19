@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'home_page.dart';
-import '../config/supabase_config.dart';
-import '../l10n/app_localizations.dart';
-import '../utils/errors.dart';
+import '../home_page/home_page.dart';
+import '../../config/supabase_config.dart';
+import '../../l10n/app_localizations.dart';
+import '../../utils/errors.dart';
+import './login_page_functions.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -35,37 +36,17 @@ class _LoginPageState extends State<LoginPage> {
         );
         return;
       }
-
-      // Inicializa una sola vez y valida que la anon key coincide con el URL
-      await initSupabase();
-      if (!supabaseKeyMatchesUrl()) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).loginApiKeyMismatch)),
-        );
-        return;
-      }
-
-      final res = await Supabase.instance.client.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
-
-      if (res.session == null) {
-        throw AuthException(AppLocalizations.of(context).loginCouldNotSignIn);
-      }
-
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomePage()),
-        (route) => false,
-      );
+      await LoginPageFunctions.signIn(context, email, password);
     } on AuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
+        SnackBar(content: Text(AppLocalizations.of(context).loginCouldNotSignIn)),
       );
     } catch (e) {
+      final msg = e.toString().contains('api_key_mismatch')
+          ? AppLocalizations.of(context).loginApiKeyMismatch
+          : Errors.loginUnexpectedError(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(Errors.loginUnexpectedError(context))),
+        SnackBar(content: Text(msg)),
       );
     } finally {
       if (mounted) setState(() => _loading = false);

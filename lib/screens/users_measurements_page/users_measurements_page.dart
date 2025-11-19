@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-import '../l10n/app_localizations.dart';
-import '../app.dart';
-import '../utils/storage_service.dart';
-import '../utils/errors.dart';
+import '../../l10n/app_localizations.dart';
+import '../../app.dart';
+import '../../utils/storage_service.dart';
+import '../../utils/errors.dart';
+import './users_measurements_page_functions.dart';
 
 class UsersMeasurementsPage extends StatefulWidget {
   const UsersMeasurementsPage({super.key});
@@ -20,11 +21,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
   final Set<int> _metersOpen = {};
 
   Stream<List<Map<String, dynamic>>> _streamPeople() {
-    final client = Supabase.instance.client;
-    return client
-        .from('people')
-        .stream(primaryKey: ['id'])
-        .order('full_name');
+    return UsersMeasurementsPageFunctions.streamPeople();
   }
 
   
@@ -224,39 +221,29 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                   if (!formKey.currentState!.validate()) return;
                                   setInnerState(() => isSaving = true);
                                   try {
-                                    final client = Supabase.instance.client;
                                     final fullName = nameCtrl.text.trim();
                                     final documentNumber = docCtrl.text.trim();
                                     final phone = phoneCtrl.text.trim();
                                     final email = emailCtrl.text.trim();
-
-                                    // Address values
                                     final neighborhood = neighborhoodCtrl.text.trim();
                                     final street = streetCtrl.text.trim();
                                     final houseNumber = houseNumberCtrl.text.trim();
                                     final city = cityCtrl.text.trim();
 
-                                    final addrInsert = await client
-                                        .from('addresses')
-                                        .insert({
-                                          'neighborhood': neighborhood,
-                                          'street': street.isEmpty ? null : street,
-                                          'house_number': houseNumber.isEmpty ? null : houseNumber,
-                                          'city': city,
-                                        })
-                                        .select('id')
-                                        .single();
+                                    final addressId = await UsersMeasurementsPageFunctions.createAddress(
+                                      neighborhood: neighborhood,
+                                      street: street.isEmpty ? null : street,
+                                      houseNumber: houseNumber.isEmpty ? null : houseNumber,
+                                      city: city,
+                                    );
 
-                                    final addressId = addrInsert['id'] as int;
-
-                                    await client.from('people').insert({
-                                      'full_name': fullName,
-                                      'document_number': documentNumber,
-                                      'phone': phone.isEmpty ? null : phone,
-                                      'email': email.isEmpty ? null : email,
-                                      'status': 'active',
-                                      'address_id': addressId,
-                                    });
+                                    await UsersMeasurementsPageFunctions.createUser(
+                                      fullName: fullName,
+                                      documentNumber: documentNumber,
+                                      phone: phone.isEmpty ? null : phone,
+                                      email: email.isEmpty ? null : email,
+                                      addressId: addressId,
+                                    );
 
                                     if (mounted) {
                                       Navigator.pop(context);
