@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../app.dart';
 import '../utils/storage_service.dart';
 import '../utils/qr_service.dart';
+import '../config/storage_config.dart';
 
 class UsersMeasurementsPage extends StatefulWidget {
   const UsersMeasurementsPage({super.key});
@@ -437,23 +438,41 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                       if (personId != null)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          child: Row(
-                            children: [
-                              FilledButton.icon(
-                                onPressed: () async {
-                                  final messenger = ScaffoldMessenger.of(context);
-                                  try {
-                                    await QrService.createAndUploadUserQr(personId: personId);
-                                    messenger.showSnackBar(const SnackBar(content: Text('QR generado')));
-                                  } catch (e) {
-                                    messenger.showSnackBar(const SnackBar(content: Text('Error al generar QR')));
-                                  }
-                                },
-                                icon: const Icon(Icons.qr_code_2),
-                                label: const Text('Generar QR'),
+                              child: Row(
+                                children: [
+                                  FilledButton.icon(
+                                    onPressed: () async {
+                                      final messenger = ScaffoldMessenger.of(context);
+                                      try {
+                                        await QrService.createAndUploadUserQr(personId: personId);
+                                        messenger.showSnackBar(const SnackBar(content: Text('QR generado')));
+                                      } catch (e) {
+                                        messenger.showSnackBar(const SnackBar(content: Text('Error al generar QR')));
+                                      }
+                                    },
+                                    icon: const Icon(Icons.qr_code_2),
+                                    label: const Text('Generar QR'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  OutlinedButton.icon(
+                                    onPressed: () async {
+                                      final messenger = ScaffoldMessenger.of(context);
+                                      try {
+                                        final path = 'users/$personId/qr.png';
+                                        final url = await StorageService(bucketName: kUsersQrBucket).createSignedUrl(path, const Duration(minutes: 15));
+                                        final ok = await launchUrlString(url, webOnlyWindowName: '_blank');
+                                        if (!ok) {
+                                          messenger.showSnackBar(const SnackBar(content: Text('No se pudo abrir el QR')));
+                                        }
+                                      } catch (_) {
+                                        messenger.showSnackBar(const SnackBar(content: Text('No se pudo obtener el QR')));
+                                      }
+                                    },
+                                    icon: const Icon(Icons.open_in_new),
+                                    label: const Text('Ver QR'),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
                         ),
                       StreamBuilder<List<Map<String, dynamic>>>(
                         stream: personId == null
