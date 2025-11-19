@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'config/supabase_config.dart';
 import 'app.dart';
+import 'services/local_database/offline_initializer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,6 +11,9 @@ void main() async {
   await Hive.openBox('app');
 
   await initSupabase();
+
+  // Initialize offline database
+  await OfflineInitializer.initialize();
 
   // Load persisted settings from Hive
   final box = Hive.box('app');
