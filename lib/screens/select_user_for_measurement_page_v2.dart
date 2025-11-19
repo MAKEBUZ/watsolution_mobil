@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../../l10n/app_localizations.dart';
 import '../../services/local_database/unified_database_service.dart';
 import 'measurement_registration_simple_page.dart';
+import 'select_user_for_measurement_page/widgets/measurement_form_sheet.dart';
 
 class SelectUserForMeasurementPageV2 extends StatefulWidget {
   const SelectUserForMeasurementPageV2({super.key});
@@ -52,16 +53,64 @@ class _SelectUserForMeasurementPageV2State extends State<SelectUserForMeasuremen
       );
 
       if (result != null && mounted) {
-        // Obtener el ID del usuario del resultado
-        final userId = result['id'] as int;
-        
-        // Ir directamente a la página de registro simplificada
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MeasurementRegistrationSimplePage(userId: userId),
-          ),
-        );
+        final rawUserId = result['user_id'] ?? result['id'] ?? result['userId'];
+        final userId = rawUserId is int ? rawUserId : int.tryParse(rawUserId?.toString() ?? '');
+        if (userId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('QR sin usuario válido')),
+          );
+        } else {
+          double? initialWater;
+          final wmRaw = result['water_measure'] ?? result['waterMeasure'] ?? result['measure'] ?? result['consumo'];
+          if (wmRaw is num) {
+            initialWater = wmRaw.toDouble();
+          } else if (wmRaw is String) {
+            initialWater = double.tryParse(wmRaw.replaceAll(',', '.'));
+          }
+
+          String? initialObs;
+          final obsRaw = result['observation'] ?? result['obs'] ?? result['observacion'];
+          if (obsRaw is String && obsRaw.trim().isNotEmpty) {
+            initialObs = obsRaw;
+          }
+
+          DateTime? initialDate;
+          final dateRaw = result['reading_date'] ?? result['date'] ?? result['fecha'];
+          if (dateRaw is String && dateRaw.isNotEmpty) {
+            initialDate = DateTime.tryParse(dateRaw);
+          }
+
+          Map<String, dynamic>? person;
+          try {
+            final localPeople = await _unifiedService.getPeople();
+            person = localPeople.firstWhere(
+              (p) => (p['server_id'] ?? p['id']) == userId,
+              orElse: () => <String, dynamic>{},
+            );
+          } catch (_) {}
+          if (person == null || (person['id'] == null && person['server_id'] == null)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Usuario no encontrado')),
+            );
+            return;
+          }
+
+          await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) {
+              return Dialog(
+                insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 48),
+                child: MeasurementFormSheet(
+                  person: person!,
+                  initialWaterMeasure: initialWater,
+                  initialObservation: initialObs,
+                  initialReadingDate: initialDate,
+                ),
+              );
+            },
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -285,17 +334,17 @@ class QRScannerForMeasurementV2 extends StatelessWidget {
               onDetect: (capture) {
                 final List<Barcode> barcodes = capture.barcodes;
                 for (final barcode in barcodes) {
-                  if (barcode.rawValue != null) {
-                    try {
-                      final decodedData = json.decode(barcode.rawValue!);
-                      if (decodedData['type'] == 'user' && decodedData['id'] != null) {
-                        Navigator.pop(context, decodedData);
-                        return;
-                      }
-                    } catch (e) {
-                      // Ignorar códigos QR no válidos
+                  final raw = barcode.rawValue;
+                  if (raw == null) continue;
+                  try {
+                    final decodedData = json.decode(raw);
+                    final rawUserId = decodedData['user_id'] ?? decodedData['id'] ?? decodedData['userId'];
+                    final userId = rawUserId is int ? rawUserId : int.tryParse(rawUserId?.toString() ?? '');
+                    if (userId != null) {
+                      Navigator.pop(context, decodedData);
+                      return;
                     }
-                  }
+                  } catch (_) {}
                 }
               },
             ),

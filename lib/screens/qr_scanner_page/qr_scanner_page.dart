@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'dart:convert';
 import '../../l10n/app_localizations.dart';
 import '../../app.dart';
 import '../select_user_for_measurement_page/select_user_for_measurement_page.dart';
+import '../select_user_for_measurement_page/widgets/measurement_form_sheet.dart';
+import '../../services/local_database/unified_database_service.dart';
 import './qr_scanner_page_functions.dart';
 
 class QrScannerPage extends StatefulWidget {
@@ -20,8 +23,8 @@ class _QrScannerPageState extends State<QrScannerPage> {
     returnImage: false,
   );
 
-  String? _lastCode;
-  bool _showingResult = false;
+  bool _navigating = false;
+  final UnifiedDatabaseService _unifiedService = UnifiedDatabaseService.instance;
 
   @override
   void dispose() {
@@ -30,74 +33,96 @@ class _QrScannerPageState extends State<QrScannerPage> {
   }
 
   void _onDetect(BarcodeCapture capture) async {
-    if (_showingResult) return;
+    if (_navigating) return;
     final code = QrScannerPageFunctions.extractFirstCode(capture);
     if (code == null) return;
-    _lastCode = code;
-    _showingResult = true;
+    Map<String, dynamic>? data;
+    try {
+      data = json.decode(code) as Map<String, dynamic>;
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('QR inválido')),
+        );
+      }
+      return;
+    }
+
+    final rawUserId = data['user_id'] ?? data['id'] ?? data['userId'];
+    final userId = rawUserId is int ? rawUserId : int.tryParse(rawUserId?.toString() ?? '');
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('QR sin usuario válido')),
+        );
+      }
+      return;
+    }
+
+    double? initialWater;
+    final wmRaw = data['water_measure'] ?? data['waterMeasure'] ?? data['measure'] ?? data['consumo'];
+    if (wmRaw is num) {
+      initialWater = wmRaw.toDouble();
+    } else if (wmRaw is String) {
+      initialWater = double.tryParse(wmRaw.replaceAll(',', '.'));
+    }
+
+    String? initialObs;
+    final obsRaw = data['observation'] ?? data['obs'] ?? data['observacion'];
+    if (obsRaw is String && obsRaw.trim().isNotEmpty) {
+      initialObs = obsRaw;
+    }
+
+    DateTime? initialDate;
+    final dateRaw = data['reading_date'] ?? data['date'] ?? data['fecha'];
+    if (dateRaw is String && dateRaw.isNotEmpty) {
+      initialDate = DateTime.tryParse(dateRaw);
+    }
+
+    _navigating = true;
+    try {
+      await _controller.stop();
+    } catch (_) {}
+    Map<String, dynamic>? person;
+    try {
+      final people = await _unifiedService.getPeople();
+      person = people.firstWhere(
+        (p) => (p['server_id'] ?? p['id']) == userId,
+        orElse: () => <String, dynamic>{},
+      );
+    } catch (_) {}
+    if (person == null || (person['id'] == null && person['server_id'] == null)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Usuario no encontrado')),
+        );
+      }
+      _navigating = false;
+      try {
+        await _controller.start();
+      } catch (_) {}
+      return;
+    }
     if (!mounted) return;
-    await showModalBottomSheet(
+    await showDialog<bool>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      barrierDismissible: false,
       builder: (context) {
-        final cs = Theme.of(context).colorScheme;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.qr_code_2, color: cs.primary),
-                  const SizedBox(width: 8),
-                  Text(
-                    AppLocalizations.of(context).homeScanQR,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: cs.onSurface,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _lastCode ?? '—',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: cs.onSurface),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('OK'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      setState(() {
-                        _showingResult = false;
-                        _lastCode = null;
-                      });
-                    },
-                    child: const Text('Escanear otra vez'),
-                  ),
-                ],
-              ),
-            ],
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 48),
+          child: MeasurementFormSheet(
+            person: person!,
+            initialWaterMeasure: initialWater,
+            initialObservation: initialObs,
+            initialReadingDate: initialDate,
           ),
         );
       },
     );
-    if (mounted) {
-      setState(() {});
-    }
+    _navigating = false;
+    try {
+      await _controller.start();
+    } catch (_) {}
   }
 
   @override
