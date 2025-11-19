@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../users_measurements_page/users_measurements_page.dart';
 import './home_page_functions.dart';
 import '../qr_scanner_page/qr_scanner_page.dart';
+import './widgets/home_card.dart';
 import '../../utils/storage_service.dart';
 import '../landing_page/landing_page.dart';
 import '../../utils/errors.dart';
@@ -141,7 +142,7 @@ class HomePage extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _HomeCard(
+                  child: HomeCard(
                     title: AppLocalizations.of(context).homeScanQR,
                     icon: Icons.qr_code_scanner,
                     bg: cardBg(),
@@ -155,7 +156,7 @@ class HomePage extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _HomeCard(
+                  child: HomeCard(
                     title: AppLocalizations.of(context).homeUsers,
                     icon: Icons.people_outline,
                     bg: cardBg(),
@@ -367,126 +368,6 @@ class HomePage extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _HomeCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Color bg;
-  final Color fg;
-  final VoidCallback? onTap;
-  const _HomeCard({
-    required this.title,
-    required this.icon,
-    required this.bg,
-    required this.fg,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        height: 130,
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: cs.primary.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              right: 12,
-              bottom: 12,
-              child: Icon(icon, color: cs.primary.withOpacity(0.7), size: 28),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: fg,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    ' ',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: fg.withOpacity(0.6)),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HistoryItem extends StatelessWidget {
-  final ColorScheme cs;
-  final bool isDark;
-  const _HistoryItem({required this.cs, required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? cs.surface : cs.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            height: 48,
-            width: 72,
-            decoration: BoxDecoration(
-              color: cs.primary.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.stacked_line_chart, color: cs.primary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${AppLocalizations.of(context).measurement} #${DateTime.now().millisecondsSinceEpoch % 10000}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: cs.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Fecha: —',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.7)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Icon(Icons.chevron_right, color: cs.onSurface.withOpacity(0.6)),
-        ],
       ),
     );
   }

@@ -1,0 +1,45 @@
+import 'package:flutter/material.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../utils/errors.dart';
+
+class PeopleList extends StatelessWidget {
+  final Stream<List<Map<String, dynamic>>> stream;
+  final void Function(Map<String, dynamic>) onOpenMeasurementForm;
+  const PeopleList({required this.stream, required this.onOpenMeasurementForm, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: stream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text(Errors.errorLoading(context), style: TextStyle(color: cs.error)));
+        }
+        final people = snapshot.data ?? [];
+        if (people.isEmpty) {
+          return Center(child: Text(AppLocalizations.of(context).noUsers));
+        }
+        return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: people.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          itemBuilder: (context, i) {
+            final p = people[i];
+            final name = (p['full_name'] ?? '').toString();
+            final doc = (p['document_number'] ?? '').toString();
+            final label = [name, doc].where((s) => s.isNotEmpty).join(' • ');
+            return ListTile(
+              title: Text(label.isEmpty ? '—' : label),
+              trailing: IconButton(icon: const Icon(Icons.water_drop_outlined), onPressed: () => onOpenMeasurementForm(p)),
+            );
+          },
+        );
+      },
+    );
+  }
+}
