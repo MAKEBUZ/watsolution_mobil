@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 import '../../app.dart';
 import '../../l10n/app_localizations.dart';
 import '../users_measurements_page/users_measurements_page.dart';
@@ -8,9 +6,6 @@ import './home_page_functions.dart';
 import '../qr_scanner_page/qr_scanner_page.dart';
 import './widgets/home_card.dart';
 import './widgets/home_history_list.dart';
-import '../../utils/storage_service.dart';
-import '../landing_page/landing_page.dart';
-import '../../utils/errors.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});

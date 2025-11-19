@@ -64,6 +64,7 @@ class SelectUserForMeasurementFunctions {
     if (personId == null) {
       throw Exception('invalid_user');
     }
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
     final client = Supabase.instance.client;
     final since = DateTime(DateTime.now().year, DateTime.now().month - 3, 1);
     final sinceStr = '${since.year}-${since.month.toString().padLeft(2, '0')}-${since.day.toString().padLeft(2, '0')}';
@@ -133,7 +134,6 @@ class SelectUserForMeasurementFunctions {
     };
     final jsonData = jsonEncode(data);
 
-    final isEs = Localizations.localeOf(context).languageCode == 'es';
     final prompt = isEs
         ? 'Eres un asistente de consumo de agua para facturación. Con el CONTEXTO estructurado (JSON) que te doy, genera un mensaje CORTO (máx. 2 frases) para la factura: resume el consumo reciente del usuario y compáralo brevemente con el promedio del vecindario si está disponible. Añade una recomendación práctica si aplica. Evita alarmismo y tecnicismos. CONTEXTO:\n$jsonData'
         : "You are a water consumption assistant for invoicing. Using the structured CONTEXT (JSON) provided, generate a SHORT message (max 2 sentences) for the invoice: summarize the user's recent consumption and briefly compare it to the neighborhood average if available. Add a practical recommendation when appropriate. Avoid alarmism and jargon. CONTEXT:\n$jsonData";

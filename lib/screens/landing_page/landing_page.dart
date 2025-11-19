@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../../utils/asset_utils.dart';
 import './landing_page_functions.dart';
 import '../login_page/login_page.dart';
 import '../../l10n/app_localizations.dart';
@@ -13,7 +12,6 @@ class LandingPage extends StatefulWidget {
 }
 
 class _LandingPageState extends State<LandingPage> {
-  bool _hasBg = false;
   bool _hasLogo = false;
   bool _hasBgSvg = false;
   bool _hasBgPng = false;
@@ -28,7 +26,6 @@ class _LandingPageState extends State<LandingPage> {
     final r = await LandingPageFunctions.initAssets();
     if (mounted) {
       setState(() {
-        _hasBg = false;
         _hasBgPng = r.hasBgPng;
         _hasBgSvg = r.hasBgSvg;
         _hasLogo = r.hasLogo;
