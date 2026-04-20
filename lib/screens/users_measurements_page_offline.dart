@@ -391,7 +391,7 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
                     children: [
                       Icon(Icons.flag_outlined, color: selectedColor('es'), size: 18),
                       const SizedBox(width: 8),
-                      Text(AppLocalizations.of(context).languageSpanish),
+                      Text('${AppLocalizations.of(context).languageSpanish} (ES)'),
                     ],
                   ),
                 ),
@@ -401,7 +401,7 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
                     children: [
                       Icon(Icons.flag_outlined, color: selectedColor('en'), size: 18),
                       const SizedBox(width: 8),
-                      Text(AppLocalizations.of(context).languageEnglish),
+                      Text('${AppLocalizations.of(context).languageEnglish} (EN)'),
                     ],
                   ),
                 ),
@@ -418,7 +418,11 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
           IconButton(
             tooltip: AppLocalizations.of(context).toggleTheme,
             onPressed: () => appState.toggleTheme(),
-            icon: const Icon(Icons.brightness_6),
+            icon: Icon(
+              Theme.of(context).brightness == Brightness.dark
+                  ? Icons.light_mode
+                  : Icons.dark_mode,
+            ),
           ),
           const SizedBox(width: 8),
         ],

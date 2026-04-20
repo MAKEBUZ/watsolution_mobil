@@ -107,19 +107,23 @@ class HomePage extends StatelessWidget {
                 PopupMenuItem(
                   value: 'toggle_theme',
                   child: Row(
-                    children: [const Icon(Icons.brightness_6), const SizedBox(width: 8), Text(AppLocalizations.of(context).toggleTheme)],
+                    children: [
+                      Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+                      const SizedBox(width: 8),
+                      Text(AppLocalizations.of(context).toggleTheme),
+                    ],
                   ),
                 ),
                 const PopupMenuDivider(),
                 menuItem(
                   value: 'lang_es',
-                  label: AppLocalizations.of(context).languageSpanish,
+                  label: '${AppLocalizations.of(context).languageSpanish} (ES)',
                   icon: Icons.language,
                   selected: currentLang == 'es',
                 ),
                 menuItem(
                   value: 'lang_en',
-                  label: AppLocalizations.of(context).languageEnglish,
+                  label: '${AppLocalizations.of(context).languageEnglish} (EN)',
                   icon: Icons.language,
                   selected: currentLang == 'en',
                 ),
