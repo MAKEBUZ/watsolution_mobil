@@ -4,7 +4,6 @@ import '../l10n/app_localizations.dart';
 import '../app.dart';
 import '../utils/storage_service.dart';
 import '../utils/qr_service.dart';
-import '../config/storage_config.dart';
 import '../services/local_database/unified_database_service.dart';
 
 class UsersMeasurementsPageOffline extends StatefulWidget {
@@ -290,8 +289,15 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
                                       // Generar QR si está online
                                       if (_isOnline && result['id'] != null) {
                                         try {
-                                          await QrService.createAndUploadUserQr(personId: result['id']);
-                                        } catch (_) {}
+                                          await QrService.createUserQr(personId: result['id']);
+                                        } catch (e) {
+                                          print('Error generando QR tras crear usuario (offline page): $e');
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Usuario creado, pero error al generar QR: $e')),
+                                            );
+                                          }
+                                        }
                                       }
                                     }
 
@@ -511,7 +517,10 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
                                       final messenger = ScaffoldMessenger.of(context);
                                       try {
                                         if (_isOnline) {
-                                          await QrService.createAndUploadUserQr(personId: personId);
+                                          final qrBytes = await QrService.createUserQr(personId: personId);
+                                          if (context.mounted) {
+                                            await QrService.showQrDialog(context, qrBytes, 'QR del Usuario');
+                                          }
                                         } else {
                                           // Guardar en cola para generar QR cuando esté online
                                           messenger.showSnackBar(
@@ -521,6 +530,7 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
                                         }
                                         messenger.showSnackBar(const SnackBar(content: Text('QR generado')));
                                       } catch (e) {
+                                        print('Error al generar QR manual (offline page): $e');
                                         messenger.showSnackBar(SnackBar(content: Text('Error al generar QR: $e')));
                                       }
                                     },
@@ -538,11 +548,13 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
                                           );
                                           return;
                                         }
-                                        final path = 'users/$personId/qr.png';
-                                        final url = await StorageService(bucketName: kUsersQrBucket).createSignedUrl(path, const Duration(minutes: 15));
-                                        final ok = await launchUrlString(url, webOnlyWindowName: '_blank');
-                                        if (!ok) {
-                                          messenger.showSnackBar(const SnackBar(content: Text('No se pudo abrir el QR')));
+                                        try {
+                                          final qrBytes = await QrService.createUserQr(personId: personId);
+                                          if (context.mounted) {
+                                            await QrService.showQrDialog(context, qrBytes, 'QR del Usuario');
+                                          }
+                                        } catch (e) {
+                                          messenger.showSnackBar(SnackBar(content: Text('No se pudo obtener el QR: $e')));
                                         }
                                       } catch (_) {
                                         messenger.showSnackBar(const SnackBar(content: Text('No se pudo obtener el QR')));
@@ -692,7 +704,7 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
                                                 final messenger = ScaffoldMessenger.of(context);
                                                 final loc = AppLocalizations.of(context);
                                                 try {
-                                                  final url = await StorageService().createSignedUrl(invoicePath!, const Duration(minutes: 15));
+                                                  final url = await StorageService.getInvoiceDownloadUrl(int.parse(invoicePath!));
                                                   final ok = await launchUrlString(url, webOnlyWindowName: '_blank');
                                                   if (!ok) {
                                                     messenger.showSnackBar(SnackBar(content: Text(loc.invoiceOpenFailed)));

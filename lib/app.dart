@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/landing_page/landing_page.dart';
 import 'screens/home_page/home_page.dart';
+import 'services/api/auth_service.dart';
 import 'l10n/app_localizations.dart';
 
 class AppState extends ChangeNotifier {
@@ -13,7 +13,6 @@ class AppState extends ChangeNotifier {
   void setThemeMode(ThemeMode mode) {
     if (themeMode != mode) {
       themeMode = mode;
-      // Persist selection using Hive
       final box = Hive.box('app');
       box.put('themeMode', themeMode == ThemeMode.dark ? 'dark' : 'light');
       notifyListeners();
@@ -27,7 +26,6 @@ class AppState extends ChangeNotifier {
   void setLocale(Locale newLocale) {
     if (locale != newLocale) {
       locale = newLocale;
-      // Persist selection using Hive
       final box = Hive.box('app');
       box.put('localeCode', newLocale.languageCode);
       notifyListeners();
@@ -38,14 +36,14 @@ class AppState extends ChangeNotifier {
 final appState = AppState();
 
 ThemeData _buildLightTheme() {
-  const primary = Color(0xFF2A9DF4); // Azul agua
-  const secondary = Color(0xFF0077C8); // Azul medio
-  const background = Color(0xFFF4F9FF); // Blanco azulado
-  const surface = Color(0xFFE8F1FA); // Azul muy claro
-  const onBackground = Color(0xFF0A2342); // Azul oscuro (texto principal)
-  const onSurface = Color(0xFF5A6C7D); // Gris azulado (texto secundario)
-  const success = Color(0xFF4FC3A1); // Verde agua
-  const error = Color(0xFFE57373); // Rojo suave
+  const primary = Color(0xFF2A9DF4);
+  const secondary = Color(0xFF0077C8);
+  const background = Color(0xFFF4F9FF);
+  const surface = Color(0xFFE8F1FA);
+  const onBackground = Color(0xFF0A2342);
+  const onSurface = Color(0xFF5A6C7D);
+  const success = Color(0xFF4FC3A1);
+  const error = Color(0xFFE57373);
 
   return ThemeData(
     useMaterial3: true,
@@ -82,14 +80,14 @@ ThemeData _buildLightTheme() {
 }
 
 ThemeData _buildDarkTheme() {
-  const primary = Color(0xFF2A9DF4); // Azul brillante
-  const secondary = Color(0xFF5FA8D3); // Celeste claro
-  const background = Color(0xFF0D1B2A); // Azul oscuro
-  const surface = Color(0xFF1B263B); // Azul grisáceo
-  const onBackground = Colors.white; // Blanco puro
-  const onSurface = Color(0xFFB0C4DE); // Gris claro
-  const success = Color(0xFF4FC3A1); // Verde agua
-  const error = Color(0xFFFF6B6B); // Rojo coral
+  const primary = Color(0xFF2A9DF4);
+  const secondary = Color(0xFF5FA8D3);
+  const background = Color(0xFF0D1B2A);
+  const surface = Color(0xFF1B263B);
+  const onBackground = Colors.white;
+  const onSurface = Color(0xFFB0C4DE);
+  const success = Color(0xFF4FC3A1);
+  const error = Color(0xFFFF6B6B);
 
   return ThemeData(
     useMaterial3: true,
@@ -144,7 +142,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final session = Supabase.instance.client.auth.currentSession;
+    final isLoggedIn = AuthService.instance.isLoggedIn;
     return AnimatedBuilder(
       animation: appState,
       builder: (context, _) {
@@ -162,7 +160,7 @@ class MyApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
             AppLocalizationsDelegate(),
           ],
-          home: session != null ? const HomePage() : const LandingPage(),
+          home: isLoggedIn ? const HomePage() : const LandingPage(),
         );
       },
     );

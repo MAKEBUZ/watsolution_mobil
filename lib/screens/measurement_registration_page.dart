@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/local_database/unified_database_service.dart';
+import '../services/api/person_service.dart';
 
 class MeasurementRegistrationPage extends StatefulWidget {
   const MeasurementRegistrationPage({super.key});
@@ -51,17 +51,8 @@ class _MeasurementRegistrationPageState extends State<MeasurementRegistrationPag
       Map<String, dynamic>? user;
 
       if (_isOnline) {
-        // Buscar en Supabase
-        final client = Supabase.instance.client;
-        final response = await client
-            .from('people')
-            .select('''
-              *,
-              addresses(*)
-            ''')
-            .eq('id', userId)
-            .single();
-        user = response;
+        // Buscar en backend
+        user = await PersonService.instance.getById(userId);
       } else {
         // Buscar en base de datos local
         final localPeople = await _unifiedService.getPeople();
@@ -82,7 +73,7 @@ class _MeasurementRegistrationPageState extends State<MeasurementRegistrationPag
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Usuario encontrado: ${user['full_name']}'),
+            content: Text('Usuario encontrado: ${user['fullName'] ?? user['full_name']}'),
             backgroundColor: Colors.green,
           ),
         );
@@ -171,7 +162,7 @@ class _MeasurementRegistrationPageState extends State<MeasurementRegistrationPag
     if (_scannedUser == null) return const SizedBox.shrink();
 
     final user = _scannedUser!;
-    final address = user['addresses'];
+    final address = user['address'] ?? user['addresses'];
 
     return Card(
       elevation: 4,
@@ -201,14 +192,14 @@ class _MeasurementRegistrationPageState extends State<MeasurementRegistrationPag
             ),
             const SizedBox(height: 8),
             Text(
-              user['full_name'] ?? 'Sin nombre',
+              user['fullName'] ?? user['full_name'] ?? 'Sin nombre',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
             ),
             const SizedBox(height: 4),
             Text(
-              'Documento: ${user['document_number'] ?? 'N/A'}',
+              'Documento: ${user['documentNumber'] ?? user['document_number'] ?? 'N/A'}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             if (user['phone'] != null) ...[
@@ -234,7 +225,7 @@ class _MeasurementRegistrationPageState extends State<MeasurementRegistrationPag
                     ),
               ),
               Text(
-                '${address['neighborhood'] ?? ''}, ${address['street'] ?? ''} ${address['house_number'] ?? ''}',
+                '${address['neighborhood'] ?? ''}, ${address['street'] ?? ''} ${address['houseNumber'] ?? address['house_number'] ?? ''}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               Text(

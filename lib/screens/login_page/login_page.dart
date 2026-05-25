@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../l10n/app_localizations.dart';
 import './login_page_functions.dart';
 
@@ -34,8 +33,6 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
       await LoginPageFunctions.signIn(context, email, password);
-    } on AuthException catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(loc.loginCouldNotSignIn)));
     } catch (e) {
       final msg = e.toString().contains('api_key_mismatch')
           ? loc.loginApiKeyMismatch
@@ -88,7 +85,6 @@ class _LoginPageState extends State<LoginPage> {
                       : Text(AppLocalizations.of(context).loginEnter),
                 ),
                 const SizedBox(height: 12),
-                // Se elimina totalmente la opción de "Crear cuenta"
               ],
             ),
           ),

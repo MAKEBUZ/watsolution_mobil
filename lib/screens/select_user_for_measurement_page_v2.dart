@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'dart:convert';
 import '../../l10n/app_localizations.dart';
+import '../../services/api/person_service.dart';
 import '../../services/local_database/unified_database_service.dart';
 import 'measurement_registration_simple_page.dart';
 import 'select_user_for_measurement_page/widgets/measurement_form_sheet.dart';
@@ -27,14 +28,19 @@ class _SelectUserForMeasurementPageV2State extends State<SelectUserForMeasuremen
   Stream<List<Map<String, dynamic>>> _streamPeople() async* {
     while (true) {
       try {
-        final people = await _unifiedService.getPeople();
-        yield people;
-        await Future.delayed(const Duration(seconds: 5));
+        // 1. Intentar traer del backend primero
+        final people = await PersonService.instance.getAll(page: 0, size: 500);
+        yield people.cast<Map<String, dynamic>>();
       } catch (e) {
-        print('Error en stream de personas: $e');
-        yield [];
-        await Future.delayed(const Duration(seconds: 5));
+        // 2. Fallback: base de datos local
+        try {
+          final people = await _unifiedService.getPeople();
+          yield people;
+        } catch (_) {
+          yield [];
+        }
       }
+      await Future.delayed(const Duration(seconds: 5));
     }
   }
 
@@ -82,12 +88,19 @@ class _SelectUserForMeasurementPageV2State extends State<SelectUserForMeasuremen
 
           Map<String, dynamic>? person;
           try {
-            final localPeople = await _unifiedService.getPeople();
-            person = localPeople.firstWhere(
-              (p) => (p['server_id'] ?? p['id']) == userId,
-              orElse: () => <String, dynamic>{},
-            );
-          } catch (_) {}
+            // 1. Intentar traer del backend directamente
+            person = await PersonService.instance.getById(userId);
+          } catch (_) {
+            // 2. Fallback: buscar en base de datos local
+            try {
+              final localPeople = await _unifiedService.getPeople();
+              person = localPeople.firstWhere(
+                (p) => (p['server_id'] ?? p['id']) == userId,
+                orElse: () => <String, dynamic>{},
+              );
+            } catch (_) {}
+          }
+          if (!mounted) return;
           if (person == null || (person['id'] == null && person['server_id'] == null)) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Usuario no encontrado')),
@@ -95,6 +108,7 @@ class _SelectUserForMeasurementPageV2State extends State<SelectUserForMeasuremen
             return;
           }
 
+          if (!mounted) return;
           await showDialog<bool>(
             context: context,
             barrierDismissible: false,
@@ -122,16 +136,18 @@ class _SelectUserForMeasurementPageV2State extends State<SelectUserForMeasuremen
   }
 
   // Función para seleccionar usuario de la lista
-  void _selectUser(Map<String, dynamic> user) {
-    // Obtener el ID del usuario seleccionado
+  void _selectUser(Map<String, dynamic> user) async {
     final userId = user['id'] as int;
-    
-    Navigator.pushReplacement(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => MeasurementRegistrationSimplePage(userId: userId),
       ),
     );
+    if (result == true && mounted) {
+      // Notificar a la pantalla anterior que se debe refrescar
+      Navigator.pop(context, true);
+    }
   }
 
   @override
@@ -232,8 +248,8 @@ class _SelectUserForMeasurementPageV2State extends State<SelectUserForMeasuremen
                   itemCount: users.length,
                   itemBuilder: (context, index) {
                     final user = users[index];
-                    final name = user['full_name'] ?? 'Sin nombre';
-                    final doc = user['document_number'] ?? 'Sin documento';
+                    final name = user['fullName'] ?? user['full_name'] ?? 'Sin nombre';
+                    final doc = user['documentNumber'] ?? user['document_number'] ?? 'Sin documento';
                     final address = user['addresses'];
                     
                     return Card(

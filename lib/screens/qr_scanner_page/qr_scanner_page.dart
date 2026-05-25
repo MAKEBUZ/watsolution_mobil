@@ -6,6 +6,7 @@ import '../../app.dart';
 import '../select_user_for_measurement_page/select_user_for_measurement_page.dart';
 import '../select_user_for_measurement_page/widgets/measurement_form_sheet.dart';
 import '../../services/local_database/unified_database_service.dart';
+import '../../services/api/person_service.dart';
 import './qr_scanner_page_functions.dart';
 
 class QrScannerPage extends StatefulWidget {
@@ -83,14 +84,22 @@ class _QrScannerPageState extends State<QrScannerPage> {
     try {
       await _controller.stop();
     } catch (_) {}
+
     Map<String, dynamic>? person;
     try {
-      final people = await _unifiedService.getPeople();
-      person = people.firstWhere(
-        (p) => (p['server_id'] ?? p['id']) == userId,
-        orElse: () => <String, dynamic>{},
-      );
-    } catch (_) {}
+      // 1. Intentar traer del backend directamente (más confiable)
+      person = await PersonService.instance.getById(userId);
+    } catch (_) {
+      // 2. Fallback: buscar en base de datos local
+      try {
+        final people = await _unifiedService.getPeople();
+        person = people.firstWhere(
+          (p) => (p['server_id'] ?? p['id']) == userId,
+          orElse: () => <String, dynamic>{},
+        );
+      } catch (_) {}
+    }
+
     if (person == null || (person['id'] == null && person['server_id'] == null)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -104,7 +113,7 @@ class _QrScannerPageState extends State<QrScannerPage> {
       return;
     }
     if (!mounted) return;
-    await showDialog<bool>(
+    final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) {
@@ -123,6 +132,10 @@ class _QrScannerPageState extends State<QrScannerPage> {
     try {
       await _controller.start();
     } catch (_) {}
+    if (result == true && mounted) {
+      // Notificar éxito a la pantalla anterior para refrescar home
+      Navigator.pop(context, true);
+    }
   }
 
   @override

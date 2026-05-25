@@ -20,13 +20,29 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
   }
 
   Future _createDB(Database db, int version) async {
-    // Tabla de personas
+    await db.execute('''
+      CREATE TABLE addresses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        server_id INTEGER,
+        neighborhood TEXT NOT NULL,
+        street TEXT,
+        house_number TEXT,
+        city TEXT NOT NULL,
+        latitude REAL,
+        longitude REAL,
+        sync_status TEXT DEFAULT 'pending',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
     await db.execute('''
       CREATE TABLE people (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,28 +53,18 @@ class DatabaseHelper {
         email TEXT,
         status TEXT DEFAULT 'active',
         address_id INTEGER,
+        subscriber_number TEXT,
+        stratum INTEGER,
+        user_id TEXT,
+        green_points INTEGER DEFAULT 0,
+        days_since_last_debt INTEGER DEFAULT 0,
+        savings_percent REAL DEFAULT 0,
         sync_status TEXT DEFAULT 'pending',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
 
-    // Tabla de direcciones
-    await db.execute('''
-      CREATE TABLE addresses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        server_id INTEGER,
-        neighborhood TEXT NOT NULL,
-        street TEXT,
-        house_number TEXT,
-        city TEXT NOT NULL,
-        sync_status TEXT DEFAULT 'pending',
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )
-    ''');
-
-    // Tabla de medidores
     await db.execute('''
       CREATE TABLE meters (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,7 +81,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Tabla de sincronización
     await db.execute('''
       CREATE TABLE sync_queue (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,7 +93,21 @@ class DatabaseHelper {
     ''');
   }
 
-  // Métodos CRUD para People
+  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Migración v1 -> v2: agregar columnas nuevas a people y addresses
+      await db.execute('ALTER TABLE people ADD COLUMN subscriber_number TEXT');
+      await db.execute('ALTER TABLE people ADD COLUMN stratum INTEGER');
+      await db.execute('ALTER TABLE people ADD COLUMN user_id TEXT');
+      await db.execute('ALTER TABLE people ADD COLUMN green_points INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE people ADD COLUMN days_since_last_debt INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE people ADD COLUMN savings_percent REAL DEFAULT 0');
+      await db.execute('ALTER TABLE addresses ADD COLUMN latitude REAL');
+      await db.execute('ALTER TABLE addresses ADD COLUMN longitude REAL');
+    }
+  }
+
+  // Metodos CRUD para People
   Future<int> insertPerson(LocalPerson person) async {
     final db = await instance.database;
     return await db.insert('people', person.toMap());
@@ -102,28 +121,24 @@ class DatabaseHelper {
 
   Future<LocalPerson?> getPersonById(int id) async {
     final db = await instance.database;
-    final result = await db.query(
-      'people',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    if (result.isNotEmpty) {
-      return LocalPerson.fromMap(result.first);
-    }
+    final result = await db.query('people', where: 'id = ?', whereArgs: [id]);
+    if (result.isNotEmpty) return LocalPerson.fromMap(result.first);
+    return null;
+  }
+
+  Future<LocalPerson?> getPersonByServerId(int serverId) async {
+    final db = await instance.database;
+    final result = await db.query('people', where: 'server_id = ?', whereArgs: [serverId]);
+    if (result.isNotEmpty) return LocalPerson.fromMap(result.first);
     return null;
   }
 
   Future<int> updatePerson(LocalPerson person) async {
     final db = await instance.database;
-    return await db.update(
-      'people',
-      person.toMap(),
-      where: 'id = ?',
-      whereArgs: [person.id],
-    );
+    return await db.update('people', person.toMap(), where: 'id = ?', whereArgs: [person.id]);
   }
 
-  // Métodos CRUD para Addresses
+  // Metodos CRUD para Addresses
   Future<int> insertAddress(LocalAddress address) async {
     final db = await instance.database;
     return await db.insert('addresses', address.toMap());
@@ -131,18 +146,12 @@ class DatabaseHelper {
 
   Future<LocalAddress?> getAddressById(int id) async {
     final db = await instance.database;
-    final result = await db.query(
-      'addresses',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    if (result.isNotEmpty) {
-      return LocalAddress.fromMap(result.first);
-    }
+    final result = await db.query('addresses', where: 'id = ?', whereArgs: [id]);
+    if (result.isNotEmpty) return LocalAddress.fromMap(result.first);
     return null;
   }
 
-  // Métodos CRUD para Meters
+  // Metodos CRUD para Meters
   Future<int> insertMeter(LocalMeter meter) async {
     final db = await instance.database;
     return await db.insert('meters', meter.toMap());
@@ -159,7 +168,7 @@ class DatabaseHelper {
     return result.map((json) => LocalMeter.fromMap(json)).toList();
   }
 
-  // Métodos para sincronización
+  // Metodos para sincronizacion
   Future<int> insertSyncQueueItem(SyncQueueItem item) async {
     final db = await instance.database;
     return await db.insert('sync_queue', item.toMap());
@@ -173,52 +182,29 @@ class DatabaseHelper {
 
   Future<int> deleteSyncQueueItem(int id) async {
     final db = await instance.database;
-    return await db.delete(
-      'sync_queue',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.delete('sync_queue', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Obtener datos pendientes de sincronización
   Future<List<LocalPerson>> getPeoplePendingSync() async {
     final db = await instance.database;
-    final result = await db.query(
-      'people',
-      where: 'sync_status = ?',
-      whereArgs: ['pending'],
-      orderBy: 'created_at',
-    );
+    final result = await db.query('people', where: 'sync_status = ?', whereArgs: ['pending'], orderBy: 'created_at');
     return result.map((json) => LocalPerson.fromMap(json)).toList();
   }
 
   Future<List<LocalMeter>> getMetersPendingSync() async {
     final db = await instance.database;
-    final result = await db.query(
-      'meters',
-      where: 'sync_status = ?',
-      whereArgs: ['pending'],
-      orderBy: 'created_at',
-    );
+    final result = await db.query('meters', where: 'sync_status = ?', whereArgs: ['pending'], orderBy: 'created_at');
     return result.map((json) => LocalMeter.fromMap(json)).toList();
   }
 
-  // Actualizar estado de sincronización
   Future<void> updatePersonSyncStatus(int id, String status, {int? serverId}) async {
     final db = await instance.database;
     final updates = {
       'sync_status': status,
       'updated_at': DateTime.now().toIso8601String(),
     };
-    if (serverId != null) {
-      updates['server_id'] = serverId.toString();
-    }
-    await db.update(
-      'people',
-      updates,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    if (serverId != null) updates['server_id'] = serverId.toString();
+    await db.update('people', updates, where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> updateMeterSyncStatus(int id, String status, {int? serverId}) async {
@@ -227,15 +213,16 @@ class DatabaseHelper {
       'sync_status': status,
       'updated_at': DateTime.now().toIso8601String(),
     };
-    if (serverId != null) {
-      updates['server_id'] = serverId.toString();
-    }
-    await db.update(
-      'meters',
-      updates,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    if (serverId != null) updates['server_id'] = serverId.toString();
+    await db.update('meters', updates, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> clearAll() async {
+    final db = await instance.database;
+    await db.delete('meters');
+    await db.delete('people');
+    await db.delete('addresses');
+    await db.delete('sync_queue');
   }
 
   Future close() async {
