@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter/foundation.dart';
-import '../utils/asset_utils.dart';
-import 'login_page.dart';
-import '../l10n/app_localizations.dart';
+import './landing_page_functions.dart';
+import '../login_page/login_page.dart';
+import '../../l10n/app_localizations.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -13,7 +12,6 @@ class LandingPage extends StatefulWidget {
 }
 
 class _LandingPageState extends State<LandingPage> {
-  bool _hasBg = false;
   bool _hasLogo = false;
   bool _hasBgSvg = false;
   bool _hasBgPng = false;
@@ -25,16 +23,12 @@ class _LandingPageState extends State<LandingPage> {
   }
 
   Future<void> _initAssets() async {
-    // final bgJpg = await assetExists('assets/images/landing_bg.jpg'); // no usar JPG
-    final bgPng = await assetExists('assets/images/landing_bg.png');
-    final bgSvg = await assetExists('assets/images/landing_bg.svg');
-    final logo = await assetExists('assets/logo/logo.svg');
+    final r = await LandingPageFunctions.initAssets();
     if (mounted) {
       setState(() {
-        _hasBg = false; // no usar JPG
-        _hasBgPng = bgPng;
-        _hasBgSvg = bgSvg;
-        _hasLogo = logo;
+        _hasBgPng = r.hasBgPng;
+        _hasBgSvg = r.hasBgSvg;
+        _hasLogo = r.hasLogo;
       });
     }
   }
@@ -64,8 +58,8 @@ class _LandingPageState extends State<LandingPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.2),
-                    Colors.black.withOpacity(0.6),
+                    Colors.black.withValues(alpha: 0.2),
+                    Colors.black.withValues(alpha: 0.6),
                   ],
                 ),
               ),
@@ -113,7 +107,7 @@ class _LandingPageState extends State<LandingPage> {
                   Text(
                     AppLocalizations.of(context).landingDescription,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.85),
+                      color: Colors.white.withValues(alpha: 0.85),
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
                     ),

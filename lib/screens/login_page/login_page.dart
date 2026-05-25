@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'home_page.dart';
-import '../config/supabase_config.dart';
-import '../l10n/app_localizations.dart';
+import '../../l10n/app_localizations.dart';
+import './login_page_functions.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -25,47 +24,23 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _signIn() async {
     setState(() => _loading = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final loc = AppLocalizations.of(context);
     try {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
       if (email.isEmpty || password.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).loginEnterEmailPassword)),
-        );
+        messenger.showSnackBar(SnackBar(content: Text(loc.loginEnterEmailPassword)));
         return;
       }
-
-      // Inicializa una sola vez y valida que la anon key coincide con el URL
-      await initSupabase();
-      if (!supabaseKeyMatchesUrl()) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).loginApiKeyMismatch)),
-        );
-        return;
-      }
-
-      final res = await Supabase.instance.client.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
-
-      if (res.session == null) {
-        throw AuthException(AppLocalizations.of(context).loginCouldNotSignIn);
-      }
-
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomePage()),
-        (route) => false,
-      );
-    } on AuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      await LoginPageFunctions.signIn(context, email, password);
+    } on AuthException catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(loc.loginCouldNotSignIn)));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).loginUnexpectedError)),
-      );
+      final msg = e.toString().contains('api_key_mismatch')
+          ? loc.loginApiKeyMismatch
+          : loc.loginUnexpectedError;
+      messenger.showSnackBar(SnackBar(content: Text(msg)));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

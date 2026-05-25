@@ -1,36 +1,57 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import '../l10n/app_localizations.dart';
 import '../app.dart';
 import '../utils/storage_service.dart';
 import '../utils/qr_service.dart';
 import '../config/storage_config.dart';
+import '../services/local_database/unified_database_service.dart';
 
-class UsersMeasurementsPage extends StatefulWidget {
-  const UsersMeasurementsPage({super.key});
+class UsersMeasurementsPageOffline extends StatefulWidget {
+  const UsersMeasurementsPageOffline({super.key});
 
   @override
-  State<UsersMeasurementsPage> createState() => _UsersMeasurementsPageState();
+  State<UsersMeasurementsPageOffline> createState() => _UsersMeasurementsPageOfflineState();
 }
 
-class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
+class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffline> {
   late Stream<List<Map<String, dynamic>>> _peopleStream;
+  final UnifiedDatabaseService _unifiedService = UnifiedDatabaseService.instance;
+  bool _isOnline = true;
 
-  Stream<List<Map<String, dynamic>>> _streamPeople() {
-    final client = Supabase.instance.client;
-    return client
-        .from('people')
-        .stream(primaryKey: ['id'])
-        .order('full_name');
+  Stream<List<Map<String, dynamic>>> _streamPeople() async* {
+    while (true) {
+      try {
+        final people = await _unifiedService.getPeople();
+        yield people;
+        
+        // Verificar conectividad
+        _checkConnectivity();
+        
+        // Esperar 5 segundos antes de actualizar
+        await Future.delayed(const Duration(seconds: 5));
+      } catch (e) {
+        print('Error en stream de personas: $e');
+        yield [];
+        await Future.delayed(const Duration(seconds: 5));
+      }
+    }
   }
 
-  
+  Future<void> _checkConnectivity() async {
+    final isOnline = await _unifiedService.syncService.isOnline();
+    if (mounted && isOnline != _isOnline) {
+      setState(() {
+        _isOnline = isOnline;
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _peopleStream = _streamPeople();
+    _checkConnectivity();
   }
 
   Future<void> _openCreateUserForm() async {
@@ -93,6 +114,26 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    // Indicador de modo offline
+                    if (!_isOnline)
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: cs.error.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.wifi_off, color: cs.error, size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Modo offline - Los datos se sincronizarán cuando haya conexión',
+                              style: TextStyle(color: cs.error, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
                     const SizedBox(height: 12),
                     Card(
                       color: cs.surface,
@@ -201,7 +242,6 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                               validator: (v) => (v == null || v.trim().isEmpty) ? loc.requiredField : null,
                             ),
                             const SizedBox(height: 12),
-                            // Se eliminan campos de latitud/longitud según requerimiento
                           ],
                         ),
                       ),
@@ -223,7 +263,6 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                   if (!formKey.currentState!.validate()) return;
                                   setInnerState(() => isSaving = true);
                                   try {
-                                    final client = Supabase.instance.client;
                                     final fullName = nameCtrl.text.trim();
                                     final documentNumber = docCtrl.text.trim();
                                     final phone = phoneCtrl.text.trim();
@@ -235,36 +274,26 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                     final houseNumber = houseNumberCtrl.text.trim();
                                     final city = cityCtrl.text.trim();
 
-                                    final addrInsert = await client
-                                        .from('addresses')
-                                        .insert({
-                                          'neighborhood': neighborhood,
-                                          'street': street.isEmpty ? null : street,
-                                          'house_number': houseNumber.isEmpty ? null : houseNumber,
-                                          'city': city,
-                                        })
-                                        .select('id')
-                                        .single();
+                                    // Crear persona usando el servicio unificado
+                                    final result = await _unifiedService.createPerson(
+                                      fullName: fullName,
+                                      documentNumber: documentNumber,
+                                      phone: phone.isEmpty ? null : phone,
+                                      email: email.isEmpty ? null : email,
+                                      neighborhood: neighborhood,
+                                      street: street.isEmpty ? null : street,
+                                      houseNumber: houseNumber.isEmpty ? null : houseNumber,
+                                      city: city,
+                                    );
 
-                                    final addressId = addrInsert['id'] as int;
-
-                                    final insertedPerson = await client
-                                        .from('people')
-                                        .insert({
-                                          'full_name': fullName,
-                                          'document_number': documentNumber,
-                                          'phone': phone.isEmpty ? null : phone,
-                                          'email': email.isEmpty ? null : email,
-                                          'status': 'active',
-                                          'address_id': addressId,
-                                        })
-                                        .select('id')
-                                        .single();
-
-                                    final newPersonId = insertedPerson['id'] as int;
-                                    try {
-                                      await QrService.createAndUploadUserQr(personId: newPersonId);
-                                    } catch (_) {}
+                                    if (result != null) {
+                                      // Generar QR si está online
+                                      if (_isOnline && result['id'] != null) {
+                                        try {
+                                          await QrService.createAndUploadUserQr(personId: result['id']);
+                                        } catch (_) {}
+                                      }
+                                    }
 
                                     if (!context.mounted) return;
                                     Navigator.of(context).pop(true);
@@ -275,7 +304,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                     setInnerState(() => isSaving = false);
                                     if (!context.mounted) return;
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(loc.userCreateError)),
+                                      SnackBar(content: Text('${loc.userCreateError}: $e')),
                                     );
                                   }
                                 },
@@ -306,6 +335,39 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
       appBar: AppBar(
         title: Text(AppLocalizations.of(context).homeUsers),
         actions: [
+          // Indicador de conexión
+          IconButton(
+            icon: Icon(_isOnline ? Icons.wifi : Icons.wifi_off),
+            color: _isOnline ? cs.primary : cs.error,
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(_isOnline ? 'Conectado a internet' : 'Sin conexión a internet'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+          // Botón de sincronización manual
+          IconButton(
+            icon: const Icon(Icons.sync),
+            onPressed: () async {
+              try {
+                await _unifiedService.syncData();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Sincronización completada')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error al sincronizar: $e')),
+                  );
+                }
+              }
+            },
+          ),
           // Idioma: Español / Inglés
           PopupMenuButton<String>(
             icon: const Icon(Icons.language),
@@ -381,7 +443,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  AppLocalizations.of(context).errorLoading,
+                  '${AppLocalizations.of(context).errorLoading}: ${snapshot.error}',
                   style: TextStyle(color: cs.error),
                   textAlign: TextAlign.center,
                 ),
@@ -448,10 +510,18 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                     onPressed: () async {
                                       final messenger = ScaffoldMessenger.of(context);
                                       try {
-                                        await QrService.createAndUploadUserQr(personId: personId);
+                                        if (_isOnline) {
+                                          await QrService.createAndUploadUserQr(personId: personId);
+                                        } else {
+                                          // Guardar en cola para generar QR cuando esté online
+                                          messenger.showSnackBar(
+                                            const SnackBar(content: Text('QR se generará cuando haya conexión')),
+                                          );
+                                          return;
+                                        }
                                         messenger.showSnackBar(const SnackBar(content: Text('QR generado')));
                                       } catch (e) {
-                                        messenger.showSnackBar(const SnackBar(content: Text('Error al generar QR')));
+                                        messenger.showSnackBar(SnackBar(content: Text('Error al generar QR: $e')));
                                       }
                                     },
                                     icon: const Icon(Icons.qr_code_2),
@@ -462,6 +532,12 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                     onPressed: () async {
                                       final messenger = ScaffoldMessenger.of(context);
                                       try {
+                                        if (!_isOnline) {
+                                          messenger.showSnackBar(
+                                            const SnackBar(content: Text('Función no disponible en modo offline')),
+                                          );
+                                          return;
+                                        }
                                         final path = 'users/$personId/qr.png';
                                         final url = await StorageService(bucketName: kUsersQrBucket).createSignedUrl(path, const Duration(minutes: 15));
                                         final ok = await launchUrlString(url, webOnlyWindowName: '_blank');
@@ -481,11 +557,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                       StreamBuilder<List<Map<String, dynamic>>>(
                         stream: personId == null
                             ? null
-                            : Supabase.instance.client
-                                .from('meters')
-                                .stream(primaryKey: ['id'])
-                                .eq('people_id', personId)
-                                .order('reading_date'),
+                            : _streamMetersForPerson(personId),
                         builder: (context, mSnap) {
                           if (mSnap.connectionState == ConnectionState.waiting) {
                             return const Padding(
@@ -614,7 +686,7 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
                                       IconButton(
                                         icon: const Icon(Icons.download_outlined),
                                         color: tileFg().withValues(alpha: 0.75),
-                                onPressed: invoicePath == null
+                                onPressed: invoicePath == null || !_isOnline
                                         ? null
                                         : () async {
                                                 final messenger = ScaffoldMessenger.of(context);
@@ -647,5 +719,26 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
         },
       ),
     );
+  }
+
+  // Stream para medidores de una persona específica
+  Stream<List<Map<String, dynamic>>> _streamMetersForPerson(int personId) async* {
+    while (true) {
+      try {
+        final meters = await _unifiedService.getMetersByPersonId(personId);
+        yield meters;
+        await Future.delayed(const Duration(seconds: 5));
+      } catch (e) {
+        print('Error en stream de medidores: $e');
+        yield [];
+        await Future.delayed(const Duration(seconds: 5));
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _unifiedService.dispose();
+    super.dispose();
   }
 }
