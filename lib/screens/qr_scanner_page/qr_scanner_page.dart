@@ -49,7 +49,8 @@ class _QrScannerPageState extends State<QrScannerPage> {
       return;
     }
 
-    final rawUserId = data['user_id'] ?? data['id'] ?? data['userId'];
+    // Soportar formato nuevo (personId) y antiguo (user_id / id / userId)
+    final rawUserId = data['personId'] ?? data['user_id'] ?? data['id'] ?? data['userId'];
     final userId = rawUserId is int ? rawUserId : int.tryParse(rawUserId?.toString() ?? '');
     if (userId == null) {
       if (mounted) {
@@ -79,6 +80,11 @@ class _QrScannerPageState extends State<QrScannerPage> {
     if (dateRaw is String && dateRaw.isNotEmpty) {
       initialDate = DateTime.tryParse(dateRaw);
     }
+
+    // Extraer tarifas del QR (formato nuevo del backend)
+    final rateRaw = data['rate'];
+    final fixedChargeRaw = data['fixedCharge'] ?? data['fixed_charge'];
+    final subsidyRaw = data['subsidy'];
 
     _navigating = true;
     try {
@@ -124,6 +130,9 @@ class _QrScannerPageState extends State<QrScannerPage> {
             initialWaterMeasure: initialWater,
             initialObservation: initialObs,
             initialReadingDate: initialDate,
+            initialRate: rateRaw != null ? (rateRaw is num ? rateRaw.toDouble() : double.tryParse(rateRaw.toString())) : null,
+            initialFixedCharge: fixedChargeRaw != null ? (fixedChargeRaw is num ? fixedChargeRaw.toDouble() : double.tryParse(fixedChargeRaw.toString())) : null,
+            initialSubsidy: subsidyRaw != null ? (subsidyRaw is num ? subsidyRaw.toDouble() : double.tryParse(subsidyRaw.toString())) : null,
           ),
         );
       },

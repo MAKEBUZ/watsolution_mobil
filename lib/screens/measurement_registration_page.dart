@@ -42,12 +42,14 @@ class _MeasurementRegistrationPageState extends State<MeasurementRegistrationPag
     try {
       final decodedData = json.decode(qrData);
       
-      if (decodedData['type'] != 'user' || decodedData['id'] == null) {
+      // Soportar formato nuevo (personId) y antiguo (type == 'user' + id)
+      final rawUserId = decodedData['personId'] ?? decodedData['id'];
+      if (rawUserId == null) {
         throw Exception('QR inválido: no es un usuario válido');
       }
 
       // Buscar el usuario en la base de datos local o remota
-      final userId = decodedData['id'] as int;
+      final userId = rawUserId is int ? rawUserId : int.tryParse(rawUserId.toString()) ?? 0;
       Map<String, dynamic>? user;
 
       if (_isOnline) {

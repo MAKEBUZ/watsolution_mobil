@@ -8,7 +8,19 @@ class MeasurementFormSheet extends StatefulWidget {
   final double? initialWaterMeasure;
   final String? initialObservation;
   final DateTime? initialReadingDate;
-  const MeasurementFormSheet({required this.person, this.initialWaterMeasure, this.initialObservation, this.initialReadingDate, super.key});
+  final double? initialRate;
+  final double? initialFixedCharge;
+  final double? initialSubsidy;
+  const MeasurementFormSheet({
+    required this.person,
+    this.initialWaterMeasure,
+    this.initialObservation,
+    this.initialReadingDate,
+    this.initialRate,
+    this.initialFixedCharge,
+    this.initialSubsidy,
+    super.key,
+  });
 
   @override
   State<MeasurementFormSheet> createState() => _MeasurementFormSheetState();
@@ -36,6 +48,10 @@ class _MeasurementFormSheetState extends State<MeasurementFormSheet> {
     if (wm != null) _waterCtrl.text = wm.toString();
     final obs = widget.initialObservation;
     if (obs != null && obs.isNotEmpty) _obsCtrl.text = obs;
+    // Usar tarifas del QR si vienen
+    if (widget.initialRate != null) _rateCtrl.text = widget.initialRate.toString();
+    if (widget.initialFixedCharge != null) _fixedChargeCtrl.text = widget.initialFixedCharge.toString();
+    if (widget.initialSubsidy != null) _subsidyCtrl.text = widget.initialSubsidy.toString();
     _loadPreviousReading();
   }
 

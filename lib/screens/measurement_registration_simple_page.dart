@@ -9,6 +9,9 @@ class MeasurementRegistrationSimplePage extends StatefulWidget {
   final double? initialWaterMeasure;
   final String? initialObservation;
   final DateTime? initialReadingDate;
+  final double? initialRate;
+  final double? initialFixedCharge;
+  final double? initialSubsidy;
 
   const MeasurementRegistrationSimplePage({
     super.key,
@@ -16,6 +19,9 @@ class MeasurementRegistrationSimplePage extends StatefulWidget {
     this.initialWaterMeasure,
     this.initialObservation,
     this.initialReadingDate,
+    this.initialRate,
+    this.initialFixedCharge,
+    this.initialSubsidy,
   });
 
   @override
@@ -60,6 +66,19 @@ class _MeasurementRegistrationSimplePageState extends State<MeasurementRegistrat
     }
     if (widget.initialObservation != null && widget.initialObservation!.isNotEmpty) {
       _observationCtrl.text = widget.initialObservation!;
+    }
+    // Usar tarifas del QR si vienen
+    if (widget.initialRate != null) {
+      _rateCtrl.text = widget.initialRate.toString();
+      _calculateTotals();
+    }
+    if (widget.initialFixedCharge != null) {
+      _fixedChargeCtrl.text = widget.initialFixedCharge.toString();
+      _calculateTotals();
+    }
+    if (widget.initialSubsidy != null) {
+      _subsidyCtrl.text = widget.initialSubsidy.toString();
+      _calculateTotals();
     }
   }
 

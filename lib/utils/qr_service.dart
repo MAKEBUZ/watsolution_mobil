@@ -7,11 +7,29 @@ import '../services/api/person_service.dart';
 
 class QrService {
   static Future<Uint8List> generateUserQrPng(Map<String, dynamic> person) async {
+    // Construir dirección igual que el backend
+    final addressMap = person['address'] as Map<String, dynamic>?;
+    final address = addressMap != null
+        ? [
+            addressMap['street'],
+            addressMap['houseNumber'] ?? addressMap['house_number'],
+            addressMap['neighborhood'],
+            addressMap['city'],
+          ].where((v) => v != null && v.toString().isNotEmpty).join(', ')
+        : '';
+
+    // Mismo formato que el backend (admin.controller.ts)
     final data = {
-      'type': 'user',
-      'id': person['id'],
-      'name': person['fullName'] ?? person['full_name'],
-      'document_number': person['documentNumber'] ?? person['document_number'],
+      'v': 1,
+      'personId': person['id'],
+      'name': person['fullName'] ?? person['full_name'] ?? '',
+      'doc': person['documentNumber'] ?? person['document_number'] ?? '',
+      'sub': person['subscriberNumber'] ?? person['subscriber_number'] ?? '',
+      'stratum': person['stratum'] ?? 1,
+      'address': address,
+      'rate': 2500,
+      'fixedCharge': 5000,
+      'subsidy': 0.15,
     };
     final payload = jsonEncode(data);
     print('[QrService] Generando QR para persona ${person['id']} con payload length: ${payload.length}');

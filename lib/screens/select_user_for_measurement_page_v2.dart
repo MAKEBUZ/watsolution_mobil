@@ -25,6 +25,12 @@ class _SelectUserForMeasurementPageV2State extends State<SelectUserForMeasuremen
     _peopleStream = _streamPeople();
   }
 
+  void _refresh() {
+    setState(() {
+      _peopleStream = _streamPeople();
+    });
+  }
+
   Stream<List<Map<String, dynamic>>> _streamPeople() async* {
     while (true) {
       try {
@@ -59,7 +65,8 @@ class _SelectUserForMeasurementPageV2State extends State<SelectUserForMeasuremen
       );
 
       if (result != null && mounted) {
-        final rawUserId = result['user_id'] ?? result['id'] ?? result['userId'];
+        // Soportar formato nuevo (personId) y formato antiguo (user_id / id / userId)
+        final rawUserId = result['personId'] ?? result['user_id'] ?? result['id'] ?? result['userId'];
         final userId = rawUserId is int ? rawUserId : int.tryParse(rawUserId?.toString() ?? '');
         if (userId == null) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -85,6 +92,11 @@ class _SelectUserForMeasurementPageV2State extends State<SelectUserForMeasuremen
           if (dateRaw is String && dateRaw.isNotEmpty) {
             initialDate = DateTime.tryParse(dateRaw);
           }
+
+          // Extraer tarifas del QR (formato nuevo)
+          final rateRaw = result['rate'];
+          final fixedChargeRaw = result['fixedCharge'] ?? result['fixed_charge'];
+          final subsidyRaw = result['subsidy'];
 
           Map<String, dynamic>? person;
           try {
@@ -120,6 +132,9 @@ class _SelectUserForMeasurementPageV2State extends State<SelectUserForMeasuremen
                   initialWaterMeasure: initialWater,
                   initialObservation: initialObs,
                   initialReadingDate: initialDate,
+                  initialRate: rateRaw != null ? (rateRaw is num ? rateRaw.toDouble() : double.tryParse(rateRaw.toString())) : null,
+                  initialFixedCharge: fixedChargeRaw != null ? (fixedChargeRaw is num ? fixedChargeRaw.toDouble() : double.tryParse(fixedChargeRaw.toString())) : null,
+                  initialSubsidy: subsidyRaw != null ? (subsidyRaw is num ? subsidyRaw.toDouble() : double.tryParse(subsidyRaw.toString())) : null,
                 ),
               );
             },
@@ -159,6 +174,11 @@ class _SelectUserForMeasurementPageV2State extends State<SelectUserForMeasuremen
       appBar: AppBar(
         title: Text(loc.homeUsers),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Recargar',
+            onPressed: _refresh,
+          ),
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
             tooltip: 'Escanear QR',
@@ -354,7 +374,8 @@ class QRScannerForMeasurementV2 extends StatelessWidget {
                   if (raw == null) continue;
                   try {
                     final decodedData = json.decode(raw);
-                    final rawUserId = decodedData['user_id'] ?? decodedData['id'] ?? decodedData['userId'];
+                    // Soportar formato nuevo (personId) y antiguo (user_id / id / userId)
+                    final rawUserId = decodedData['personId'] ?? decodedData['user_id'] ?? decodedData['id'] ?? decodedData['userId'];
                     final userId = rawUserId is int ? rawUserId : int.tryParse(rawUserId?.toString() ?? '');
                     if (userId != null) {
                       Navigator.pop(context, decodedData);
