@@ -22,14 +22,9 @@ class HomePageFunctions {
   /// Cada invoice incluye meter y person anidados.
   static Future<List<Map<String, dynamic>>> fetchRecentInvoices() async {
     try {
-      final invoices = await InvoiceService.instance.getAll(size: 20);
+      // Pedir las facturas ordenadas por id descendente y tomar las 10 más recientes
+      final invoices = await InvoiceService.instance.getAll(size: 10, sort: 'id,desc');
       final typed = invoices.cast<Map<String, dynamic>>();
-      // Ordenar por fecha de emisión descendente
-      typed.sort((a, b) {
-        final dateA = DateTime.tryParse((a['issueDate'] ?? a['issue_date'] ?? '').toString()) ?? DateTime(1970);
-        final dateB = DateTime.tryParse((b['issueDate'] ?? b['issue_date'] ?? '').toString()) ?? DateTime(1970);
-        return dateB.compareTo(dateA);
-      });
       return typed;
     } catch (e) {
       print('Error obteniendo facturas recientes: $e');

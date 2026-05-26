@@ -8,10 +8,12 @@ class InvoiceService {
   InvoiceService._init();
 
   /// GET /api/invoices - devuelve array plano InvoiceDTO[]
-  Future<List<dynamic>> getAll({int page = 0, int size = 20}) async {
+  Future<List<dynamic>> getAll({int page = 0, int size = 20, String sort = ''}) async {
+    final query = <String, dynamic>{'page': page, 'size': size};
+    if (sort.isNotEmpty) query['sort'] = sort;
     final response = await _api.client.get(
       ApiConfig.invoices,
-      queryParameters: {'page': page, 'size': size},
+      queryParameters: query,
     );
     return response.data as List<dynamic>;
   }
