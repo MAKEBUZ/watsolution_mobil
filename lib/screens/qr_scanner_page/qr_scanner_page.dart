@@ -6,6 +6,7 @@ import '../../app.dart';
 import '../select_user_for_measurement_page/select_user_for_measurement_page.dart';
 import '../select_user_for_measurement_page/widgets/measurement_form_sheet.dart';
 import '../../services/local_database/unified_database_service.dart';
+import '../../services/api/person_service.dart';
 import './qr_scanner_page_functions.dart';
 
 class QrScannerPage extends StatefulWidget {
@@ -48,7 +49,8 @@ class _QrScannerPageState extends State<QrScannerPage> {
       return;
     }
 
-    final rawUserId = data['user_id'] ?? data['id'] ?? data['userId'];
+    // Soportar formato nuevo (personId) y antiguo (user_id / id / userId)
+    final rawUserId = data['personId'] ?? data['user_id'] ?? data['id'] ?? data['userId'];
     final userId = rawUserId is int ? rawUserId : int.tryParse(rawUserId?.toString() ?? '');
     if (userId == null) {
       if (mounted) {
@@ -79,18 +81,31 @@ class _QrScannerPageState extends State<QrScannerPage> {
       initialDate = DateTime.tryParse(dateRaw);
     }
 
+    // Extraer tarifas del QR (formato nuevo del backend)
+    final rateRaw = data['rate'];
+    final fixedChargeRaw = data['fixedCharge'] ?? data['fixed_charge'];
+    final subsidyRaw = data['subsidy'];
+
     _navigating = true;
     try {
       await _controller.stop();
     } catch (_) {}
+
     Map<String, dynamic>? person;
     try {
-      final people = await _unifiedService.getPeople();
-      person = people.firstWhere(
-        (p) => (p['server_id'] ?? p['id']) == userId,
-        orElse: () => <String, dynamic>{},
-      );
-    } catch (_) {}
+      // 1. Intentar traer del backend directamente (más confiable)
+      person = await PersonService.instance.getById(userId);
+    } catch (_) {
+      // 2. Fallback: buscar en base de datos local
+      try {
+        final people = await _unifiedService.getPeople();
+        person = people.firstWhere(
+          (p) => (p['server_id'] ?? p['id']) == userId,
+          orElse: () => <String, dynamic>{},
+        );
+      } catch (_) {}
+    }
+
     if (person == null || (person['id'] == null && person['server_id'] == null)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -104,7 +119,7 @@ class _QrScannerPageState extends State<QrScannerPage> {
       return;
     }
     if (!mounted) return;
-    await showDialog<bool>(
+    final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) {
@@ -115,6 +130,9 @@ class _QrScannerPageState extends State<QrScannerPage> {
             initialWaterMeasure: initialWater,
             initialObservation: initialObs,
             initialReadingDate: initialDate,
+            initialRate: rateRaw != null ? (rateRaw is num ? rateRaw.toDouble() : double.tryParse(rateRaw.toString())) : null,
+            initialFixedCharge: fixedChargeRaw != null ? (fixedChargeRaw is num ? fixedChargeRaw.toDouble() : double.tryParse(fixedChargeRaw.toString())) : null,
+            initialSubsidy: subsidyRaw != null ? (subsidyRaw is num ? subsidyRaw.toDouble() : double.tryParse(subsidyRaw.toString())) : null,
           ),
         );
       },
@@ -123,6 +141,10 @@ class _QrScannerPageState extends State<QrScannerPage> {
     try {
       await _controller.start();
     } catch (_) {}
+    if (result == true && mounted) {
+      // Notificar éxito a la pantalla anterior para refrescar home
+      Navigator.pop(context, true);
+    }
   }
 
   @override

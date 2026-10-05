@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
-import '../users_measurements_page_functions.dart';
+import '../../../services/local_database/unified_database_service.dart';
 import '../../../utils/qr_service.dart';
 import '../../../utils/errors.dart';
 
@@ -188,23 +188,28 @@ class _CreateUserFormSheetState extends State<CreateUserFormSheet> {
                             final houseNumber = _houseNumberCtrl.text.trim();
                             final city = _cityCtrl.text.trim();
 
-                            final addressId = await UsersMeasurementsPageFunctions.createAddress(
+                            final result = await UnifiedDatabaseService.instance.createPerson(
+                              fullName: fullName,
+                              documentNumber: documentNumber,
+                              phone: phone.isEmpty ? null : phone,
+                              email: email.isEmpty ? null : email,
                               neighborhood: neighborhood,
                               street: street.isEmpty ? null : street,
                               houseNumber: houseNumber.isEmpty ? null : houseNumber,
                               city: city,
                             );
 
-                            final personId = await UsersMeasurementsPageFunctions.createUser(
-                              fullName: fullName,
-                              documentNumber: documentNumber,
-                              phone: phone.isEmpty ? null : phone,
-                              email: email.isEmpty ? null : email,
-                              addressId: addressId,
-                            );
-                            try {
-                              await QrService.createAndUploadUserQr(personId: personId);
-                            } catch (_) {}
+                            if (result != null) {
+                              final personId = result['id'] as int?;
+                              if (personId != null) {
+                                try {
+                                  await QrService.createUserQr(personId: personId);
+                                } catch (e) {
+                                  print('Error generando QR tras crear usuario: $e');
+                                }
+                              }
+                            }
+
                             if (!context.mounted) return;
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -214,7 +219,7 @@ class _CreateUserFormSheetState extends State<CreateUserFormSheet> {
                             setState(() => _saving = false);
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(Errors.userCreateError(context))),
+                              SnackBar(content: Text('${Errors.userCreateError(context)}: $e')),
                             );
                           }
                         },

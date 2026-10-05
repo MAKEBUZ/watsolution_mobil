@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../app.dart';
-import './users_measurements_page_functions.dart';
+import '../../services/api/person_service.dart';
 import './widgets/create_user_form_sheet.dart';
 import './widgets/users_list.dart';
 
@@ -13,18 +13,30 @@ class UsersMeasurementsPage extends StatefulWidget {
 }
 
 class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
-  late Stream<List<Map<String, dynamic>>> _peopleStream;
+  late Future<List<Map<String, dynamic>>> _peopleFuture;
 
-  Stream<List<Map<String, dynamic>>> _streamPeople() {
-    return UsersMeasurementsPageFunctions.streamPeople();
+  Future<List<Map<String, dynamic>>> _loadPeople() async {
+    print('[UsersMeasurementsPage] Cargando personas...');
+    try {
+      final people = await PersonService.instance.getAll(size: 1000);
+      print('[UsersMeasurementsPage] Personas cargadas: ${people.length}');
+      return people.cast<Map<String, dynamic>>();
+    } catch (e) {
+      print('[UsersMeasurementsPage] Error cargando personas: $e');
+      rethrow;
+    }
   }
 
-  
+  void _refresh() {
+    setState(() {
+      _peopleFuture = _loadPeople();
+    });
+  }
 
   @override
   void initState() {
     super.initState();
-    _peopleStream = _streamPeople();
+    _peopleFuture = _loadPeople();
   }
 
   Future<void> _openCreateUserForm() async {
@@ -38,6 +50,8 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
       ),
       builder: (context) => const CreateUserFormSheet(),
     );
+    // Recargar lista después de crear usuario
+    _refresh();
   }
 
   @override
@@ -46,7 +60,11 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
       appBar: AppBar(
         title: Text(AppLocalizations.of(context).homeUsers),
         actions: [
-          // Idioma: Español / Inglés
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Recargar',
+            onPressed: _refresh,
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.language),
             onSelected: (value) {
@@ -86,13 +104,6 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
               ];
             },
           ),
-          // Cerrar sesión (NO IMPLEMENTAR: botón deshabilitado)
-          IconButton(
-            tooltip: '${AppLocalizations.of(context).logout} (no activo)',
-            onPressed: null,
-            icon: const Icon(Icons.logout),
-          ),
-          // Cambiar tema
           IconButton(
             tooltip: AppLocalizations.of(context).toggleTheme,
             onPressed: () => appState.toggleTheme(),
@@ -110,7 +121,49 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
         icon: const Icon(Icons.person_add_alt_1),
         label: Text(AppLocalizations.of(context).createUser),
       ),
-      body: UsersList(stream: _peopleStream),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _peopleFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error, size: 48),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Error al cargar usuarios:\n${snapshot.error}',
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _refresh,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Reintentar'),
+                  ),
+                ],
+              ),
+            );
+          }
+          final users = snapshot.data ?? [];
+          return RefreshIndicator(
+            onRefresh: () async {
+              _refresh();
+              await _peopleFuture;
+            },
+            child: UsersList(
+              users: users,
+              onRefresh: _refresh,
+            ),
+          );
+        },
+      ),
     );
   }
 }

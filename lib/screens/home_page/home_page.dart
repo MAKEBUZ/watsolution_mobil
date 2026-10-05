@@ -1,21 +1,65 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../app.dart';
 import '../../l10n/app_localizations.dart';
 import '../users_measurements_page/users_measurements_page.dart';
-import './home_page_functions.dart';
 import '../qr_scanner_page/qr_scanner_page.dart';
+import './home_page_functions.dart';
 import './widgets/home_card.dart';
 import './widgets/home_history_list.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late StreamController<List<Map<String, dynamic>>> _historyController;
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _historyController = StreamController<List<Map<String, dynamic>>>.broadcast();
+    _startStream();
+  }
+
+  void _startStream() {
+    // Emitir datos periódicamente
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) => _emitHistory());
+    // Emitir inmediatamente
+    _emitHistory();
+  }
+
+  Future<void> _emitHistory() async {
+    if (_historyController.isClosed) return;
+    try {
+      final invoices = await HomePageFunctions.fetchRecentInvoices();
+      if (!_historyController.isClosed) {
+        _historyController.add(invoices);
+      }
+    } catch (e) {
+      if (!_historyController.isClosed) {
+        _historyController.addError(e);
+      }
+    }
+  }
+
+  Future<void> _refresh() async {
+    await _emitHistory();
+  }
 
   void _logout(BuildContext context) async {
     await HomePageFunctions.logout(context);
   }
 
-  Stream<List<Map<String, dynamic>>> _streamRecentMeters() {
-    return HomePageFunctions.streamRecentMeters();
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _historyController.close();
+    super.dispose();
   }
 
   @override
@@ -32,15 +76,12 @@ class HomePage extends StatelessWidget {
       required bool selected,
       required IconData icon,
     }) {
-      final bg = selected ? (isDark ? cs.primary.withValues(alpha: 0.15) : cs.primary.withValues(alpha: 0.15)) : Colors.transparent;
+      final bg = selected ? cs.primary.withValues(alpha: 0.15) : Colors.transparent;
       final fg = selected ? cs.primary : cs.onSurface;
       return PopupMenuItem<String>(
         value: value,
         child: Container(
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(8),
-          ),
+          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
           child: Row(
             children: [
@@ -71,12 +112,10 @@ class HomePage extends StatelessWidget {
           ],
         ),
         actions: [
-          IconButton(onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const HomePage()),
-            );
-          }, icon: const Icon(Icons.refresh)),
+          IconButton(
+            onPressed: _refresh,
+            icon: const Icon(Icons.refresh),
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
@@ -138,7 +177,6 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Grid of two main cards
             Row(
               children: [
                 Expanded(
@@ -147,10 +185,11 @@ class HomePage extends StatelessWidget {
                     icon: Icons.qr_code_scanner,
                     bg: cardBg(),
                     fg: cardFg(),
-                    onTap: () {
-                      Navigator.of(context).push(
+                    onTap: () async {
+                      final result = await Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const QrScannerPage()),
                       );
+                      if (result == true) await _refresh();
                     },
                   ),
                 ),
@@ -161,10 +200,11 @@ class HomePage extends StatelessWidget {
                     icon: Icons.people_outline,
                     bg: cardBg(),
                     fg: cardFg(),
-                    onTap: () {
-                      Navigator.of(context).push(
+                    onTap: () async {
+                      final result = await Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const UsersMeasurementsPage()),
                       );
+                      if (result == true) await _refresh();
                     },
                   ),
                 ),
@@ -179,7 +219,7 @@ class HomePage extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 12),
-            HomeHistoryList(stream: _streamRecentMeters()),
+            HomeHistoryList(stream: _historyController.stream),
           ],
         ),
       ),

@@ -30,14 +30,31 @@ class _UserSelectionForMeasurementPageState extends State<UserSelectionForMeasur
       );
 
       if (result != null && mounted) {
-        // Obtener el ID del usuario del resultado
-        final userId = result['id'] as int;
-        
+        // Soportar formato nuevo (personId) y antiguo (id)
+        final rawUserId = result['personId'] ?? result['id'];
+        final userId = rawUserId is int ? rawUserId : int.tryParse(rawUserId?.toString() ?? '');
+        if (userId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('QR sin usuario válido'), backgroundColor: Colors.red),
+          );
+          return;
+        }
+
+        // Extraer tarifas del QR (formato nuevo)
+        final rateRaw = result['rate'];
+        final fixedChargeRaw = result['fixedCharge'] ?? result['fixed_charge'];
+        final subsidyRaw = result['subsidy'];
+
         // Ir directamente a la página de registro simplificada
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => MeasurementRegistrationSimplePage(userId: userId),
+            builder: (context) => MeasurementRegistrationSimplePage(
+              userId: userId,
+              initialRate: rateRaw != null ? (rateRaw is num ? rateRaw.toDouble() : double.tryParse(rateRaw.toString())) : null,
+              initialFixedCharge: fixedChargeRaw != null ? (fixedChargeRaw is num ? fixedChargeRaw.toDouble() : double.tryParse(fixedChargeRaw.toString())) : null,
+              initialSubsidy: subsidyRaw != null ? (subsidyRaw is num ? subsidyRaw.toDouble() : double.tryParse(subsidyRaw.toString())) : null,
+            ),
           ),
         );
       }
@@ -295,10 +312,12 @@ class QRScannerForMeasurement extends StatelessWidget {
                 final List<Barcode> barcodes = capture.barcodes;
                 for (final barcode in barcodes) {
                   if (barcode.rawValue != null) {
-                    try {
+                      try {
                       final decodedData = json.decode(barcode.rawValue!);
-                      if (decodedData['type'] == 'user' && decodedData['id'] != null) {
-                        // Validar QR y volver con el ID del usuario
+                      // Soportar formato nuevo (personId) y antiguo (type == 'user' + id)
+                      final rawUserId = decodedData['personId'] ?? decodedData['id'];
+                      if (rawUserId != null) {
+                        // Validar QR y volver con los datos del usuario
                         Navigator.pop(context, decodedData);
                         return;
                       }

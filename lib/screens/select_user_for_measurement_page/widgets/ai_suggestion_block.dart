@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../select_user_for_measurement_page/select_user_for_measurement_page_functions.dart';
-import '../../../utils/errors.dart';
 
 class AiSuggestionBlock extends StatefulWidget {
   final int? personId;
@@ -37,10 +36,10 @@ class _AiSuggestionBlockState extends State<AiSuggestionBlock> {
         _aiLoading = false;
         _aiText = t;
       });
-    } catch (_) {
+    } catch (e) {
       setState(() {
         _aiLoading = false;
-        _aiError = Errors.aiGenerateFailed(context);
+        _aiError = e.toString();
       });
     }
   }

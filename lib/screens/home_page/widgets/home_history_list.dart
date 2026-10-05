@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../home_page/home_page_functions.dart';
 import '../../../utils/errors.dart';
 import '../../../l10n/app_localizations.dart';
@@ -12,7 +11,7 @@ class HomeHistoryList extends StatelessWidget {
     if (iso == null || iso.isEmpty) return '—';
     try {
       final d = DateTime.parse(iso);
-      return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+      return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
     } catch (_) {
       return iso;
     }
@@ -49,20 +48,41 @@ class HomeHistoryList extends StatelessWidget {
           );
         }
         return Column(
-          children: items.map((m) {
-            final wm = m['water_measure']?.toString() ?? '—';
-            final dateStr = (m['reading_date'] ?? '').toString();
-            final addressId = m['address_id'] as int?;
-            final meterId = m['id'] as int?;
-            final peopleId = m['people_id'] as int?;
-            String? invoicePath;
-            final ip = m['invoice_path'];
-            if (ip is String && ip.isNotEmpty) {
-              invoicePath = ip;
-            } else if (meterId != null && peopleId != null) {
-              final fileName = 'factura_${meterId}_${_fmtDate(dateStr)}.pdf';
-              invoicePath = 'people/$peopleId/$fileName';
+          children: items.map((inv) {
+            final invoiceId = inv['id'] as int?;
+            final issueDate = (inv['issueDate'] ?? inv['issue_date'] ?? '').toString();
+            final amountDue = (inv['amountDue'] ?? inv['amount_due'] ?? 0.0);
+            final consumptionM3 = (inv['consumptionM3'] ?? inv['consumption_m_3'] ?? 0.0);
+            final status = (inv['status'] ?? 'PENDING').toString();
+            final pdfUrl = inv['pdfUrl'] ?? inv['pdf_url'];
+
+            final meter = inv['meter'] as Map<String, dynamic>?;
+            final person = inv['person'] as Map<String, dynamic>?;
+
+            final wm = (meter?['waterMeasure'] ?? meter?['water_measure'])?.toString() ?? '—';
+
+            final name = (person?['fullName'] ?? person?['full_name'] ?? '—').toString().trim();
+            final doc = (person?['documentNumber'] ?? person?['document_number'] ?? '').toString().trim();
+            final personLabel = [name, doc].where((s) => s.isNotEmpty && s != '—').join(' • ');
+
+            final address = person?['address'] as Map<String, dynamic>?;
+            String addrLabel = AppLocalizations.of(context).noAddress;
+            if (address != null) {
+              final neighborhood = (address['neighborhood'] ?? '').toString().trim();
+              final street = (address['street'] ?? '').toString().trim();
+              final house = (address['houseNumber'] ?? address['house_number'] ?? '').toString().trim();
+              final city = (address['city'] ?? '').toString().trim();
+              final left = [neighborhood, street, house].where((p) => p.isNotEmpty).join(' ');
+              if (left.isNotEmpty && city.isNotEmpty) {
+                addrLabel = '$left, $city';
+              } else {
+                addrLabel = left.isNotEmpty ? left : (city.isNotEmpty ? city : AppLocalizations.of(context).noAddress);
+              }
             }
+
+            final bool hasPdf = pdfUrl != null && pdfUrl.toString().isNotEmpty;
+            final Color statusColor = status == 'PAID' ? Colors.green : (status == 'CANCELLED' ? Colors.grey : Colors.orange);
+
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(12),
@@ -79,115 +99,77 @@ class HomeHistoryList extends StatelessWidget {
                       color: cs.primary.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(Icons.stacked_line_chart, color: cs.primary),
+                    child: Icon(Icons.receipt_long, color: cs.primary),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Builder(
-                          builder: (context) {
-                            final titleStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: cs.onSurface,
-                                  fontWeight: FontWeight.w600,
-                                );
-                            if (peopleId == null) {
-                              return Text('—', style: titleStyle);
-                            }
-                            return FutureBuilder<dynamic>(
-                              future: Supabase.instance.client
-                                  .from('people')
-                                  .select('full_name, document_number')
-                                  .eq('id', peopleId)
-                                  .limit(1),
-                              builder: (context, personSnap) {
-                                if (personSnap.connectionState == ConnectionState.waiting) {
-                                  return Text('—', style: titleStyle);
-                                }
-                                String label = '—';
-                                final data = personSnap.data;
-                                if (data is List && data.isNotEmpty) {
-                                  final p = data.first as Map<String, dynamic>;
-                                  final name = (p['full_name'] ?? '').toString().trim();
-                                  final doc = (p['document_number'] ?? '').toString().trim();
-                                  label = [name, doc].where((s) => s.isNotEmpty).join(' • ');
-                                  if (label.isEmpty) label = '—';
-                                }
-                                return Text(label, style: titleStyle);
-                              },
-                            );
-                          },
+                        Text(
+                          personLabel.isEmpty ? '—' : personLabel,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: cs.onSurface,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${AppLocalizations.of(context).date}: ${_fmtDate(dateStr)}',
+                          'Factura #${invoiceId ?? '—'} • ${_fmtDate(issueDate)}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.7)),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${AppLocalizations.of(context).measurementWater}: $wm',
+                          'Medición: $wm m³ • Consumo: ${consumptionM3.toString()} m³',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.7)),
                         ),
                         const SizedBox(height: 4),
-                        FutureBuilder<dynamic>(
-                          future: addressId == null
-                              ? Future.value(null)
-                              : Supabase.instance.client
-                                  .from('addresses')
-                                  .select('neighborhood, street, house_number, city')
-                                  .eq('id', addressId)
-                                  .limit(1),
-                          builder: (context, addrSnap) {
-                            final style = Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: cs.onSurface.withValues(alpha: 0.7),
-                                );
-                            if (addrSnap.connectionState == ConnectionState.waiting) {
-                              return Text('${AppLocalizations.of(context).address}: ${AppLocalizations.of(context).addressLoading}', style: style);
-                            }
-                            String addrLabel = AppLocalizations.of(context).noAddress;
-                            final data = addrSnap.data;
-                            if (data is List && data.isNotEmpty) {
-                              final a = data.first as Map<String, dynamic>;
-                              final neighborhood = (a['neighborhood'] ?? '').toString().trim();
-                              final street = (a['street'] ?? '').toString().trim();
-                              final house = (a['house_number'] ?? '').toString().trim();
-                              final city = (a['city'] ?? '').toString().trim();
-                              final left = [neighborhood, street, house].where((p) => p.isNotEmpty).join(' ');
-                              if (left.isNotEmpty && city.isNotEmpty) {
-                                addrLabel = '$left, $city';
-                              } else {
-                                addrLabel = left.isNotEmpty ? left : (city.isNotEmpty ? city : AppLocalizations.of(context).noAddress);
-                              }
-                            }
-                            return Text('${AppLocalizations.of(context).address}: $addrLabel', style: style);
-                          },
+                        Text(
+                          '${AppLocalizations.of(context).address}: $addrLabel',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.7)),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                status,
+                                style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '\$${amountDue is num ? amountDue.toStringAsFixed(0) : amountDue.toString()}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: cs.primary,
+                                  ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.download_outlined),
-                    color: cs.onSurface.withValues(alpha: 0.75),
-                    onPressed: invoicePath == null
-                        ? null
-                        : () async {
-                            try {
-                              final ok = await HomePageFunctions.openInvoice(invoicePath!);
-                              if (!ok && context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(Errors.invoiceOpenFailed(context))),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(Errors.invoiceFetchFailed(context))),
-                                );
-                              }
-                            }
-                          },
+                    icon: Icon(
+                      hasPdf ? Icons.download_outlined : Icons.picture_as_pdf_outlined,
+                      color: cs.onSurface.withValues(alpha: 0.75),
+                    ),
+                    tooltip: hasPdf ? 'Descargar PDF' : 'Generar PDF local',
+                    onPressed: () async {
+                      final ok = await HomePageFunctions.downloadInvoice(context, inv);
+                      if (!ok && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(Errors.invoiceOpenFailed(context))),
+                        );
+                      }
+                    },
                   ),
                 ],
               ),

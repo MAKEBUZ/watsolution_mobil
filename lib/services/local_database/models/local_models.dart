@@ -12,6 +12,13 @@ class LocalPerson {
   final String syncStatus;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  // Campos del backend NestJS
+  final String? subscriberNumber;
+  final int? stratum;
+  final String? userId;
+  final int? greenPoints;
+  final int? daysSinceLastDebt;
+  final double? savingsPercent;
 
   LocalPerson({
     this.id,
@@ -25,6 +32,12 @@ class LocalPerson {
     this.syncStatus = 'pending',
     this.createdAt,
     this.updatedAt,
+    this.subscriberNumber,
+    this.stratum,
+    this.userId,
+    this.greenPoints,
+    this.daysSinceLastDebt,
+    this.savingsPercent,
   });
 
   Map<String, dynamic> toMap() {
@@ -40,6 +53,12 @@ class LocalPerson {
       'sync_status': syncStatus,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
+      'subscriber_number': subscriberNumber,
+      'stratum': stratum,
+      'user_id': userId,
+      'green_points': greenPoints,
+      'days_since_last_debt': daysSinceLastDebt,
+      'savings_percent': savingsPercent,
     };
   }
 
@@ -56,6 +75,12 @@ class LocalPerson {
       syncStatus: map['sync_status'] ?? 'pending',
       createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : null,
       updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : null,
+      subscriberNumber: map['subscriber_number'],
+      stratum: map['stratum']?.toInt(),
+      userId: map['user_id'],
+      greenPoints: map['green_points']?.toInt(),
+      daysSinceLastDebt: map['days_since_last_debt']?.toInt(),
+      savingsPercent: map['savings_percent']?.toDouble(),
     );
   }
 
@@ -75,6 +100,12 @@ class LocalPerson {
     String? syncStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? subscriberNumber,
+    int? stratum,
+    String? userId,
+    int? greenPoints,
+    int? daysSinceLastDebt,
+    double? savingsPercent,
   }) {
     return LocalPerson(
       id: id ?? this.id,
@@ -88,6 +119,12 @@ class LocalPerson {
       syncStatus: syncStatus ?? this.syncStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      subscriberNumber: subscriberNumber ?? this.subscriberNumber,
+      stratum: stratum ?? this.stratum,
+      userId: userId ?? this.userId,
+      greenPoints: greenPoints ?? this.greenPoints,
+      daysSinceLastDebt: daysSinceLastDebt ?? this.daysSinceLastDebt,
+      savingsPercent: savingsPercent ?? this.savingsPercent,
     );
   }
 }
@@ -99,6 +136,8 @@ class LocalAddress {
   final String? street;
   final String? houseNumber;
   final String city;
+  final double? latitude;
+  final double? longitude;
   final String syncStatus;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -110,6 +149,8 @@ class LocalAddress {
     this.street,
     this.houseNumber,
     required this.city,
+    this.latitude,
+    this.longitude,
     this.syncStatus = 'pending',
     this.createdAt,
     this.updatedAt,
@@ -123,6 +164,8 @@ class LocalAddress {
       'street': street,
       'house_number': houseNumber,
       'city': city,
+      'latitude': latitude,
+      'longitude': longitude,
       'sync_status': syncStatus,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
@@ -137,6 +180,8 @@ class LocalAddress {
       street: map['street'],
       houseNumber: map['house_number'],
       city: map['city'] ?? '',
+      latitude: map['latitude']?.toDouble(),
+      longitude: map['longitude']?.toDouble(),
       syncStatus: map['sync_status'] ?? 'pending',
       createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : null,
       updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : null,

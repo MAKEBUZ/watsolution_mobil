@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../utils/qr_service.dart';
+import '../api/person_service.dart';
+import '../api/meter_service.dart';
+import '../api/address_service.dart';
 import 'database_helper.dart';
 import 'models/local_models.dart';
 
@@ -8,10 +11,12 @@ class SyncService {
   static final SyncService instance = SyncService._init();
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   final Connectivity _connectivity = Connectivity();
+  final PersonService _personService = PersonService.instance;
+  final MeterService _meterService = MeterService.instance;
+  final AddressService _addressService = AddressService.instance;
 
   SyncService._init();
 
-  // Verificar conectividad a internet
   Future<bool> isOnline() async {
     try {
       final result = await _connectivity.checkConnectivity();
@@ -21,7 +26,6 @@ class SyncService {
     }
   }
 
-  // Sincronizar todos los datos pendientes
   Future<void> syncAllData() async {
     if (!await isOnline()) {
       print('Sin conexión a internet, sincronización cancelada');
@@ -30,16 +34,9 @@ class SyncService {
 
     try {
       print('Iniciando sincronización...');
-      
-      // Sincronizar personas
       await _syncPeople();
-      
-      // Sincronizar medidores
       await _syncMeters();
-      
-      // Sincronizar cola de operaciones
       await _syncQueue();
-      
       print('Sincronización completada exitosamente');
     } catch (e) {
       print('Error durante la sincronización: $e');
@@ -47,12 +44,10 @@ class SyncService {
     }
   }
 
-  // Sincronizar personas pendientes
   Future<void> _syncPeople() async {
     try {
       final pendingPeople = await _dbHelper.getPeoplePendingSync();
       print('Sincronizando ${pendingPeople.length} personas...');
-
       for (final person in pendingPeople) {
         await _syncPerson(person);
       }
@@ -62,84 +57,70 @@ class SyncService {
     }
   }
 
-  // Sincronizar una persona individual
   Future<void> _syncPerson(LocalPerson person) async {
     try {
-      final client = Supabase.instance.client;
-      
-      // Si la persona tiene un server_id, es una actualización
       if (person.serverId != null) {
-        // Actualizar en Supabase
-        await client
-            .from('people')
-            .update({
-              'full_name': person.fullName,
-              'document_number': person.documentNumber,
-              'phone': person.phone,
-              'email': person.email,
-              'status': person.status,
-            })
-            .eq('id', person.serverId!);
-        
-        // Actualizar estado de sincronización
+        // Actualizar en backend
+        await _personService.updateById(person.serverId!, {
+          'id': person.serverId,
+          'fullName': person.fullName,
+          'documentNumber': person.documentNumber,
+          'phone': person.phone,
+          'email': person.email,
+          'status': person.status.toUpperCase(),
+        });
         await _dbHelper.updatePersonSyncStatus(person.id!, 'synced');
       } else {
-        // Crear nueva persona en Supabase
-        
-        // Primero crear la dirección si existe
-        int? addressId;
+        // Crear nueva persona en backend usando CreatePersonWithAccountDTO
+        String? neighborhood;
+        String? street;
+        String? houseNumber;
+        String? city;
         if (person.addressId != null) {
           final address = await _dbHelper.getAddressById(person.addressId!);
           if (address != null) {
-            final addrResult = await client
-                .from('addresses')
-                .insert({
-                  'neighborhood': address.neighborhood,
-                  'street': address.street,
-                  'house_number': address.houseNumber,
-                  'city': address.city,
-                })
-                .select('id')
-                .single();
-            addressId = addrResult['id'] as int;
+            neighborhood = address.neighborhood;
+            street = address.street;
+            houseNumber = address.houseNumber;
+            city = address.city;
           }
         }
 
-        // Crear persona en Supabase
-        final result = await client
-            .from('people')
-            .insert({
-              'full_name': person.fullName,
-              'document_number': person.documentNumber,
-              'phone': person.phone,
-              'email': person.email,
-              'status': person.status,
-              'address_id': addressId,
-            })
-            .select('id')
-            .single();
-        
-        final serverId = result['id'] as int;
-        
-        // Actualizar estado de sincronización con server_id
-        await _dbHelper.updatePersonSyncStatus(person.id!, 'synced', serverId: serverId);
+        final result = await _personService.create({
+          'fullName': person.fullName,
+          'documentNumber': person.documentNumber,
+          'phone': person.phone,
+          'email': person.email,
+          'status': 'ACTIVE',
+          'neighborhood': neighborhood,
+          'street': street,
+          'houseNumber': houseNumber,
+          'city': city,
+        });
+
+        final serverId = result['id'] as int?;
+        if (serverId != null) {
+          await _dbHelper.updatePersonSyncStatus(person.id!, 'synced', serverId: serverId);
+          try {
+            await QrService.createUserQr(personId: serverId);
+            print('QR generado automáticamente para persona sincronizada: $serverId');
+          } catch (e) {
+            print('Error generando QR para persona sincronizada $serverId: $e');
+          }
+        }
       }
-      
       print('Persona sincronizada: ${person.fullName}');
     } catch (e) {
       print('Error sincronizando persona ${person.fullName}: $e');
-      // Marcar como error de sincronización
       await _dbHelper.updatePersonSyncStatus(person.id!, 'error');
       rethrow;
     }
   }
 
-  // Sincronizar medidores pendientes
   Future<void> _syncMeters() async {
     try {
       final pendingMeters = await _dbHelper.getMetersPendingSync();
       print('Sincronizando ${pendingMeters.length} medidores...');
-
       for (final meter in pendingMeters) {
         await _syncMeter(meter);
       }
@@ -149,51 +130,38 @@ class SyncService {
     }
   }
 
-  // Sincronizar un medidor individual
   Future<void> _syncMeter(LocalMeter meter) async {
     try {
-      final client = Supabase.instance.client;
-      
-      // Obtener la persona asociada para obtener el server_id
       final person = await _dbHelper.getPersonById(meter.peopleId);
       if (person == null || person.serverId == null) {
         print('Persona no encontrada o no sincronizada para medidor');
         return;
       }
 
-      // Crear medidor en Supabase
-      final result = await client
-          .from('meters')
-          .insert({
-            'people_id': person.serverId,
-            'water_measure': meter.waterMeasure,
-            'reading_date': meter.readingDate.toIso8601String(),
-            'observation': meter.observation,
-            'invoice_path': meter.invoicePath,
-          })
-          .select('id')
-          .single();
-      
-      final serverId = result['id'] as int;
-      
-      // Actualizar estado de sincronización con server_id
-      await _dbHelper.updateMeterSyncStatus(meter.id!, 'synced', serverId: serverId);
-      
+      final result = await _meterService.create({
+        'personId': person.serverId,
+        'waterMeasure': meter.waterMeasure,
+        'readingDate': meter.readingDate.toIso8601String(),
+        'observation': meter.observation,
+        'invoicePath': meter.invoicePath,
+      });
+
+      final serverId = result['id'] as int?;
+      if (serverId != null) {
+        await _dbHelper.updateMeterSyncStatus(meter.id!, 'synced', serverId: serverId);
+      }
       print('Medidor sincronizado para: ${person.fullName}');
     } catch (e) {
       print('Error sincronizando medidor: $e');
-      // Marcar como error de sincronización
       await _dbHelper.updateMeterSyncStatus(meter.id!, 'error');
       rethrow;
     }
   }
 
-  // Sincronizar cola de operaciones
   Future<void> _syncQueue() async {
     try {
       final pendingItems = await _dbHelper.getPendingSyncItems();
       print('Sincronizando ${pendingItems.length} operaciones pendientes...');
-
       for (final item in pendingItems) {
         await _processSyncQueueItem(item);
       }
@@ -203,27 +171,43 @@ class SyncService {
     }
   }
 
-  // Procesar un item de la cola de sincronización
   Future<void> _processSyncQueueItem(SyncQueueItem item) async {
     try {
-      final client = Supabase.instance.client;
-      final data = json.decode(item.data);
+      final data = json.decode(item.data) as Map<String, dynamic>;
 
-      switch (item.operation) {
-        case 'insert':
-          await client.from(item.tableName).insert(data);
+      switch (item.tableName) {
+        case 'people':
+          if (item.operation == 'insert') {
+            await _personService.create(data);
+          } else if (item.operation == 'update') {
+            await _personService.update(data);
+          } else if (item.operation == 'delete') {
+            await _personService.delete(data['id']);
+          }
           break;
-        case 'update':
-          await client.from(item.tableName).update(data).eq('id', data['id']);
+        case 'addresses':
+          if (item.operation == 'insert') {
+            await _addressService.create(data);
+          } else if (item.operation == 'update') {
+            await _addressService.update(data);
+          } else if (item.operation == 'delete') {
+            await _addressService.delete(data['id']);
+          }
           break;
-        case 'delete':
-          await client.from(item.tableName).delete().eq('id', data['id']);
+        case 'meters':
+          if (item.operation == 'insert') {
+            await _meterService.create(data);
+          } else if (item.operation == 'update') {
+            await _meterService.update(data);
+          } else if (item.operation == 'delete') {
+            await _meterService.delete(data['id']);
+          }
           break;
+        default:
+          print('Tabla no soportada en cola de sync: ${item.tableName}');
       }
 
-      // Eliminar item procesado
       await _dbHelper.deleteSyncQueueItem(item.id!);
-      
       print('Operación ${item.operation} en ${item.tableName} sincronizada');
     } catch (e) {
       print('Error procesando item de cola: $e');
@@ -231,7 +215,6 @@ class SyncService {
     }
   }
 
-  // Agregar operación a la cola de sincronización
   Future<void> addToSyncQueue(String tableName, String operation, Map<String, dynamic> data) async {
     final item = SyncQueueItem(
       tableName: tableName,
@@ -240,10 +223,7 @@ class SyncService {
       data: json.encode(data),
       createdAt: DateTime.now(),
     );
-    
     await _dbHelper.insertSyncQueueItem(item);
-    
-    // Intentar sincronizar inmediatamente si hay conexión
     if (await isOnline()) {
       try {
         await syncAllData();
@@ -253,7 +233,6 @@ class SyncService {
     }
   }
 
-  // Cargar datos desde Supabase a la base de datos local
   Future<void> syncFromServer() async {
     if (!await isOnline()) {
       print('Sin conexión a internet, no se pueden cargar datos del servidor');
@@ -262,18 +241,11 @@ class SyncService {
 
     try {
       print('Cargando datos desde el servidor...');
-      final client = Supabase.instance.client;
+      final people = await _personService.getAll(size: 1000);
 
-      // Obtener personas del servidor
-      final peopleResponse = await client.from('people').select('''
-        *,
-        addresses(*)
-      ''');
-
-      for (final personData in peopleResponse) {
-        await _saveServerPersonToLocal(personData);
+      for (final personData in people) {
+        await _saveServerPersonToLocal(personData as Map<String, dynamic>);
       }
-
       print('Datos del servidor cargados exitosamente');
     } catch (e) {
       print('Error cargando datos del servidor: $e');
@@ -281,33 +253,38 @@ class SyncService {
     }
   }
 
-  // Guardar persona del servidor en base de datos local
   Future<void> _saveServerPersonToLocal(Map<String, dynamic> personData) async {
     try {
-      // Guardar dirección si existe
       int? addressId;
-      if (personData['addresses'] != null) {
-        final addressData = personData['addresses'];
+      if (personData['address'] != null) {
+        final addressData = personData['address'] as Map<String, dynamic>;
         final address = LocalAddress(
           serverId: addressData['id'],
           neighborhood: addressData['neighborhood'] ?? '',
           street: addressData['street'],
-          houseNumber: addressData['house_number'],
+          houseNumber: addressData['houseNumber'],
           city: addressData['city'] ?? '',
+          latitude: addressData['latitude']?.toDouble(),
+          longitude: addressData['longitude']?.toDouble(),
           syncStatus: 'synced',
         );
         addressId = await _dbHelper.insertAddress(address);
       }
 
-      // Guardar persona
       final person = LocalPerson(
         serverId: personData['id'],
-        fullName: personData['full_name'] ?? '',
-        documentNumber: personData['document_number'] ?? '',
+        fullName: personData['fullName'] ?? '',
+        documentNumber: personData['documentNumber'] ?? '',
         phone: personData['phone'],
         email: personData['email'],
         status: personData['status'] ?? 'active',
         addressId: addressId,
+        subscriberNumber: personData['subscriberNumber'],
+        stratum: personData['stratum']?.toInt(),
+        userId: personData['userId'],
+        greenPoints: personData['greenPoints']?.toInt(),
+        daysSinceLastDebt: personData['daysSinceLastDebt']?.toInt(),
+        savingsPercent: personData['savingsPercent']?.toDouble(),
         syncStatus: 'synced',
       );
 
@@ -318,13 +295,8 @@ class SyncService {
     }
   }
 
-  // Limpiar base de datos local
   Future<void> clearLocalData() async {
-    final db = await _dbHelper.database;
-    await db.delete('meters');
-    await db.delete('people');
-    await db.delete('addresses');
-    await db.delete('sync_queue');
+    await _dbHelper.clearAll();
     print('Base de datos local limpiada');
   }
 }

@@ -30,8 +30,8 @@ class PeopleList extends StatelessWidget {
           separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (context, i) {
             final p = people[i];
-            final name = (p['full_name'] ?? '').toString();
-            final doc = (p['document_number'] ?? '').toString();
+            final name = (p['fullName'] ?? p['full_name'] ?? '').toString();
+            final doc = (p['documentNumber'] ?? p['document_number'] ?? '').toString();
             final label = [name, doc].where((s) => s.isNotEmpty).join(' • ');
             return ListTile(
               title: Text(label.isEmpty ? '—' : label),

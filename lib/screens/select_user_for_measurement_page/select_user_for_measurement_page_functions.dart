@@ -2,13 +2,30 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../utils/storage_service.dart';
+import '../../services/local_database/unified_database_service.dart';
+import '../../services/api/person_service.dart';
+import '../../services/api/meter_service.dart';
+import '../../services/api/address_service.dart';
 import '../../utils/invoice_pdf.dart';
 
 class SelectUserForMeasurementFunctions {
-  static Stream<List<Map<String, dynamic>>> streamPeople() {
-    return Supabase.instance.client.from('people').stream(primaryKey: ['id']).order('full_name');
+  static Stream<List<Map<String, dynamic>>> streamPeople() async* {
+    while (true) {
+      try {
+        // 1. Intentar traer del backend primero
+        final people = await PersonService.instance.getAll(page: 0, size: 500);
+        yield people.cast<Map<String, dynamic>>();
+      } catch (e) {
+        // 2. Fallback: base de datos local
+        try {
+          final localPeople = await UnifiedDatabaseService.instance.getPeople();
+          yield localPeople;
+        } catch (_) {
+          yield [];
+        }
+      }
+      await Future.delayed(const Duration(seconds: 5));
+    }
   }
 
   static Future<Map<String, dynamic>> saveMeasurementAndInvoice({
@@ -18,43 +35,46 @@ class SelectUserForMeasurementFunctions {
     required DateTime readingDate,
     String? observation,
   }) async {
-    final client = Supabase.instance.client;
-    final inserted = await client
-        .from('meters')
-        .insert({
-          'people_id': person['id'],
-          'address_id': addressId,
-          'water_measure': waterMeasure,
-          'reading_date': '${readingDate.year}-${readingDate.month.toString().padLeft(2, '0')}-${readingDate.day.toString().padLeft(2, '0')}',
-          'observation': observation?.trim().isEmpty == true ? null : observation,
-        })
-        .select('id, people_id, address_id, water_measure, reading_date, observation')
-        .single();
+    final personId = person['id'] as int?;
+    if (personId == null) throw Exception('Persona sin ID');
 
-    Map<String, dynamic>? addrData;
-    final addrId = inserted['address_id'] as int?;
-    if (addrId != null) {
-      final addrList = await client
-          .from('addresses')
-          .select('neighborhood, street, house_number, city')
-          .eq('id', addrId)
-          .limit(1);
-      if (addrList.isNotEmpty) {
-        addrData = addrList.first;
-      }
+    // 1. Guardar medición usando UnifiedDatabaseService (envía al backend con formato correcto y guarda en local)
+    final inserted = await UnifiedDatabaseService.instance.createMeter(
+      personId: personId,
+      addressId: addressId,
+      waterMeasure: waterMeasure,
+      readingDate: readingDate,
+      observation: observation,
+    );
+
+    if (inserted == null) {
+      throw Exception('No se pudo guardar la medición');
     }
 
+    // 2. Generar PDF localmente para referencia (el backend maneja la generación y subida a S3)
+    Map<String, dynamic>? addrData;
+    final addrId = inserted['addressId'] ?? inserted['address_id'] ?? addressId;
+    if (addrId != null) {
+      try {
+        addrData = await AddressService.instance.getById(addrId as int);
+      } catch (_) {}
+    }
+
+    // ignore: unused_local_variable
     final pdfBytes = await buildInvoicePdf(InvoiceData(person: person, meter: inserted, address: addrData));
-    final personIdStr = inserted['people_id'].toString();
-    final readingStr = inserted['reading_date']?.toString() ?? '${readingDate.year}-${readingDate.month.toString().padLeft(2, '0')}-${readingDate.day.toString().padLeft(2, '0')}'
-        ;
-    final meterIdStr = inserted['id']?.toString() ?? '0';
+    final personIdStr = personId.toString();
+    final readingStr = (inserted['readingDate'] ?? inserted['reading_date'])?.toString() ?? '${readingDate.year}-${readingDate.month.toString().padLeft(2, '0')}-${readingDate.day.toString().padLeft(2, '0')}';
+    final meterIdStr = (inserted['id'])?.toString() ?? '0';
     final fileName = 'factura_${meterIdStr}_$readingStr.pdf';
     final path = 'people/$personIdStr/$fileName';
-    await StorageService().uploadBytes(path, pdfBytes, contentType: 'application/pdf', upsert: true);
 
+    // Nota: El backend maneja la subida de PDFs a S3. En la app movil,
+    // guardamos la referencia del path para compatibilidad.
     try {
-      await client.from('meters').update({'invoice_path': path}).eq('id', inserted['id']);
+      await MeterService.instance.updateById(int.parse(meterIdStr), {
+        'id': int.parse(meterIdStr),
+        'invoicePath': path,
+      });
     } catch (_) {}
 
     return {'inserted': inserted, 'invoicePath': path};
@@ -62,36 +82,45 @@ class SelectUserForMeasurementFunctions {
 
   static Future<String> generateAiSuggestion(BuildContext context, {required int? personId, required String name, required String document}) async {
     if (personId == null) {
-      throw Exception('invalid_user');
+      throw Exception('Usuario no valido para generar sugerencia');
     }
     final isEs = Localizations.localeOf(context).languageCode == 'es';
-    final client = Supabase.instance.client;
     final since = DateTime(DateTime.now().year, DateTime.now().month - 3, 1);
-    final sinceStr = '${since.year}-${since.month.toString().padLeft(2, '0')}-${since.day.toString().padLeft(2, '0')}';
-    final rows = await client.from('meters').select('water_measure, reading_date').eq('people_id', personId).gte('reading_date', sinceStr).order('reading_date');
+
+    // 1. Obtener mediciones del usuario
+    List<dynamic> meters;
+    try {
+      meters = await MeterService.instance.getByPersonId(personId);
+    } catch (e) {
+      throw Exception(isEs ? 'Error al cargar mediciones: $e' : 'Error loading measurements: $e');
+    }
+
     final Map<String, double> monthly = {};
-    for (final r in (rows as List)) {
-      final dStr = (r['reading_date'] ?? '').toString();
+    for (final r in meters) {
+      final dStr = (r['readingDate'] ?? r['reading_date'] ?? '').toString();
       final d = DateTime.tryParse(dStr);
-      if (d == null) continue;
+      if (d == null || d.isBefore(since)) continue;
       final key = '${d.year}-${d.month.toString().padLeft(2, '0')}';
-      final wm = (r['water_measure'] as num?)?.toDouble() ?? 0.0;
+      final wmRaw = r['waterMeasure'] ?? r['water_measure'];
+      final double wm;
+      if (wmRaw is num) {
+        wm = wmRaw.toDouble();
+      } else if (wmRaw is String) {
+        wm = double.tryParse(wmRaw) ?? 0.0;
+      } else {
+        wm = 0.0;
+      }
       monthly[key] = (monthly[key] ?? 0) + wm;
     }
 
+    // 2. Obtener direccion del usuario
     int? userAddressId;
     Map<String, dynamic>? address;
     try {
-      final personRow = await client.from('people').select('id, full_name, document_number, address_id').eq('id', personId).limit(1);
-      if (personRow.isNotEmpty) {
-        final p = personRow.first;
-        userAddressId = p['address_id'] as int?;
-      }
+      final person = await PersonService.instance.getById(personId);
+      userAddressId = person['addressId'] ?? person['address_id'];
       if (userAddressId != null) {
-        final addrList = await client.from('addresses').select('id, neighborhood, street, house_number, city').eq('id', userAddressId).limit(1);
-        if (addrList.isNotEmpty) {
-          address = addrList.first;
-        }
+        address = await AddressService.instance.getById(userAddressId);
       }
     } catch (_) {}
 
@@ -99,30 +128,8 @@ class SelectUserForMeasurementFunctions {
     try {
       final neighborhood = address?['neighborhood']?.toString();
       if (neighborhood != null && neighborhood.isNotEmpty) {
-        final addrIdsRes = await client.from('addresses').select('id').eq('neighborhood', neighborhood).limit(500);
-        final addrIds = <int>[];
-        for (final a in addrIdsRes) {
-          final id = (a)['id'] as int?;
-          if (id != null) addrIds.add(id);
-        }
-        if (addrIds.isNotEmpty) {
-          final rows2 = await client.from('meters').select('address_id, water_measure, reading_date').inFilter('address_id', addrIds).gte('reading_date', sinceStr).order('reading_date');
-          final Map<String, double> sums = {};
-          final Map<String, int> counts = {};
-          for (final r in (rows2 as List)) {
-            final dStr = (r['reading_date'] ?? '').toString();
-            final d = DateTime.tryParse(dStr);
-            if (d == null) continue;
-            final key = '${d.year}-${d.month.toString().padLeft(2, '0')}';
-            final wm = (r['water_measure'] as num?)?.toDouble() ?? 0.0;
-            sums[key] = (sums[key] ?? 0) + wm;
-            counts[key] = (counts[key] ?? 0) + 1;
-          }
-          for (final k in sums.keys) {
-            final c = counts[k] ?? 1;
-            neighborhoodMonthlyAvg[k] = c > 0 ? (sums[k]! / c) : sums[k]!;
-          }
-        }
+        // Nota: El backend no tiene un endpoint para buscar addresses por neighborhood.
+        // Esta funcionalidad queda simplificada.
       }
     } catch (_) {}
 
@@ -135,50 +142,48 @@ class SelectUserForMeasurementFunctions {
     final jsonData = jsonEncode(data);
 
     final prompt = isEs
-        ? 'Eres un asistente de consumo de agua para facturación. Con el CONTEXTO estructurado (JSON) que te doy, genera un mensaje CORTO (máx. 2 frases) para la factura: resume el consumo reciente del usuario y compáralo brevemente con el promedio del vecindario si está disponible. Añade una recomendación práctica si aplica. Evita alarmismo y tecnicismos. CONTEXTO:\n$jsonData'
+        ? 'Eres un asistente de consumo de agua para facturacion. Con el CONTEXTO estructurado (JSON) que te doy, genera un mensaje CORTO (max. 2 frases) para la factura: resume el consumo reciente del usuario y comparalo brevemente con el promedio del vecindario si esta disponible. Anade una recomendacion practica si aplica. Evita alarmismo y tecnicismos. CONTEXTO:\n$jsonData'
         : "You are a water consumption assistant for invoicing. Using the structured CONTEXT (JSON) provided, generate a SHORT message (max 2 sentences) for the invoice: summarize the user's recent consumption and briefly compare it to the neighborhood average if available. Add a practical recommendation when appropriate. Avoid alarmism and jargon. CONTEXT:\n$jsonData";
 
+    // 3. Verificar API Key
     final apiKey = dotenv.env['OPENAI_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
-      throw Exception('missing_api_key');
+      throw Exception(isEs ? 'API Key de OpenAI no configurada. Agrega OPENAI_API_KEY al archivo .env' : 'OpenAI API Key not configured. Add OPENAI_API_KEY to .env file');
     }
-    const model = 'gpt-4o-mini';
-    final r1 = await http.post(
-      Uri.parse('https://api.openai.com/v1/chat/completions'),
-      headers: {'Authorization': 'Bearer $apiKey', 'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'model': model,
-        'messages': [
-          {'role': 'system', 'content': isEs ? 'Eres un asistente de consumo de agua para facturación.' : 'You are a water consumption assistant for invoicing.'},
-          {'role': 'user', 'content': prompt},
-        ],
-      }),
-    );
 
+    // 4. Llamar a OpenAI
+    const model = 'gpt-4o-mini';
     String? text;
-    if (r1.statusCode >= 200 && r1.statusCode < 300) {
-      final b = jsonDecode(r1.body);
-      text = b['choices']?[0]?['message']?['content']?.toString();
-    }
-    if (text == null) {
-      final r2 = await http.post(
+    try {
+      final r1 = await http.post(
         Uri.parse('https://api.openai.com/v1/chat/completions'),
         headers: {'Authorization': 'Bearer $apiKey', 'Content-Type': 'application/json'},
         body: jsonEncode({
           'model': model,
           'messages': [
-            {'role': 'system', 'content': isEs ? 'Eres un analista de consumo de agua.' : 'You are a water consumption analyst.'},
+            {'role': 'system', 'content': isEs ? 'Eres un asistente de consumo de agua para facturacion.' : 'You are a water consumption assistant for invoicing.'},
             {'role': 'user', 'content': prompt},
           ],
         }),
       );
-      if (r2.statusCode >= 200 && r2.statusCode < 300) {
-        final b2 = jsonDecode(r2.body);
-        text = b2['choices']?[0]?['message']?['content']?.toString();
+
+      if (r1.statusCode >= 200 && r1.statusCode < 300) {
+        final b = jsonDecode(r1.body);
+        text = b['choices']?[0]?['message']?['content']?.toString();
+      } else if (r1.statusCode == 401) {
+        throw Exception(isEs ? 'API Key de OpenAI invalida' : 'Invalid OpenAI API Key');
+      } else if (r1.statusCode == 429) {
+        throw Exception(isEs ? 'Limite de uso de OpenAI alcanzado' : 'OpenAI rate limit reached');
+      } else {
+        throw Exception(isEs ? 'Error de OpenAI (${r1.statusCode}): ${r1.body}' : 'OpenAI error (${r1.statusCode}): ${r1.body}');
       }
+    } catch (e) {
+      if (e is Exception && e.toString().contains('OpenAI')) rethrow;
+      throw Exception(isEs ? 'Error de conexion con OpenAI: $e' : 'Connection error with OpenAI: $e');
     }
+
     if (text == null || text.trim().isEmpty) {
-      throw Exception('ai_generate_failed');
+      throw Exception(isEs ? 'La IA no genero ninguna respuesta' : 'The AI did not generate any response');
     }
     return text.trim();
   }
