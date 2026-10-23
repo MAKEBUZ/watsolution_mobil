@@ -8,7 +8,6 @@ class UsersMeasurementsPageFunctions {
         yield people;
         await Future.delayed(const Duration(seconds: 5));
       } catch (e) {
-        print('Error en stream de personas: $e');
         yield [];
         await Future.delayed(const Duration(seconds: 5));
       }

@@ -16,13 +16,10 @@ class _UsersMeasurementsPageState extends State<UsersMeasurementsPage> {
   late Future<List<Map<String, dynamic>>> _peopleFuture;
 
   Future<List<Map<String, dynamic>>> _loadPeople() async {
-    print('[UsersMeasurementsPage] Cargando personas...');
     try {
       final people = await PersonService.instance.getAll(size: 1000);
-      print('[UsersMeasurementsPage] Personas cargadas: ${people.length}');
       return people.cast<Map<String, dynamic>>();
     } catch (e) {
-      print('[UsersMeasurementsPage] Error cargando personas: $e');
       rethrow;
     }
   }

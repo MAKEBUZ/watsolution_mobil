@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import '../../config/api_config.dart';
 
 class ApiService {
   static final ApiService instance = ApiService._init();
   late final Dio _dio;
+  String? _legacyMemoryToken;
 
   ApiService._init() {
     _dio = Dio(BaseOptions(
@@ -23,17 +23,13 @@ class ApiService {
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
         }
-        print('[API] ${options.method} ${options.path}');
         handler.next(options);
       },
       onResponse: (response, handler) {
-        print('[API] ${response.statusCode} ${response.requestOptions.path}');
         handler.next(response);
       },
       onError: (DioException e, handler) {
-        print('[API ERROR] ${e.requestOptions.method} ${e.requestOptions.path} -> ${e.message}');
         if (e.response != null) {
-          print('[API ERROR BODY] ${e.response?.data}');
         }
         handler.next(e);
       },
@@ -43,18 +39,15 @@ class ApiService {
   Dio get client => _dio;
 
   String? _getToken() {
-    final box = Hive.box('app');
-    return box.get('jwt_token') as String?;
+    return _legacyMemoryToken;
   }
 
   Future<void> setToken(String token) async {
-    final box = Hive.box('app');
-    await box.put('jwt_token', token);
+    _legacyMemoryToken = token;
   }
 
   Future<void> clearToken() async {
-    final box = Hive.box('app');
-    await box.delete('jwt_token');
+    _legacyMemoryToken = null;
   }
 
   String? get currentToken => _getToken();

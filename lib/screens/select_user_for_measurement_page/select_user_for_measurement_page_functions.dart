@@ -1,7 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
 import '../../services/local_database/unified_database_service.dart';
 import '../../services/api/person_service.dart';
 import '../../services/api/meter_service.dart';
@@ -81,110 +78,6 @@ class SelectUserForMeasurementFunctions {
   }
 
   static Future<String> generateAiSuggestion(BuildContext context, {required int? personId, required String name, required String document}) async {
-    if (personId == null) {
-      throw Exception('Usuario no valido para generar sugerencia');
-    }
-    final isEs = Localizations.localeOf(context).languageCode == 'es';
-    final since = DateTime(DateTime.now().year, DateTime.now().month - 3, 1);
-
-    // 1. Obtener mediciones del usuario
-    List<dynamic> meters;
-    try {
-      meters = await MeterService.instance.getByPersonId(personId);
-    } catch (e) {
-      throw Exception(isEs ? 'Error al cargar mediciones: $e' : 'Error loading measurements: $e');
-    }
-
-    final Map<String, double> monthly = {};
-    for (final r in meters) {
-      final dStr = (r['readingDate'] ?? r['reading_date'] ?? '').toString();
-      final d = DateTime.tryParse(dStr);
-      if (d == null || d.isBefore(since)) continue;
-      final key = '${d.year}-${d.month.toString().padLeft(2, '0')}';
-      final wmRaw = r['waterMeasure'] ?? r['water_measure'];
-      final double wm;
-      if (wmRaw is num) {
-        wm = wmRaw.toDouble();
-      } else if (wmRaw is String) {
-        wm = double.tryParse(wmRaw) ?? 0.0;
-      } else {
-        wm = 0.0;
-      }
-      monthly[key] = (monthly[key] ?? 0) + wm;
-    }
-
-    // 2. Obtener direccion del usuario
-    int? userAddressId;
-    Map<String, dynamic>? address;
-    try {
-      final person = await PersonService.instance.getById(personId);
-      userAddressId = person['addressId'] ?? person['address_id'];
-      if (userAddressId != null) {
-        address = await AddressService.instance.getById(userAddressId);
-      }
-    } catch (_) {}
-
-    final Map<String, double> neighborhoodMonthlyAvg = {};
-    try {
-      final neighborhood = address?['neighborhood']?.toString();
-      if (neighborhood != null && neighborhood.isNotEmpty) {
-        // Nota: El backend no tiene un endpoint para buscar addresses por neighborhood.
-        // Esta funcionalidad queda simplificada.
-      }
-    } catch (_) {}
-
-    final data = {
-      'person': {'id': personId, 'name': name, 'document': document},
-      'address': address,
-      'user_monthly_totals_m3': monthly,
-      'neighborhood_monthly_avg_m3': neighborhoodMonthlyAvg,
-    };
-    final jsonData = jsonEncode(data);
-
-    final prompt = isEs
-        ? 'Eres un asistente de consumo de agua para facturacion. Con el CONTEXTO estructurado (JSON) que te doy, genera un mensaje CORTO (max. 2 frases) para la factura: resume el consumo reciente del usuario y comparalo brevemente con el promedio del vecindario si esta disponible. Anade una recomendacion practica si aplica. Evita alarmismo y tecnicismos. CONTEXTO:\n$jsonData'
-        : "You are a water consumption assistant for invoicing. Using the structured CONTEXT (JSON) provided, generate a SHORT message (max 2 sentences) for the invoice: summarize the user's recent consumption and briefly compare it to the neighborhood average if available. Add a practical recommendation when appropriate. Avoid alarmism and jargon. CONTEXT:\n$jsonData";
-
-    // 3. Verificar API Key
-    final apiKey = dotenv.env['OPENAI_API_KEY'];
-    if (apiKey == null || apiKey.isEmpty) {
-      throw Exception(isEs ? 'API Key de OpenAI no configurada. Agrega OPENAI_API_KEY al archivo .env' : 'OpenAI API Key not configured. Add OPENAI_API_KEY to .env file');
-    }
-
-    // 4. Llamar a OpenAI
-    const model = 'gpt-4o-mini';
-    String? text;
-    try {
-      final r1 = await http.post(
-        Uri.parse('https://api.openai.com/v1/chat/completions'),
-        headers: {'Authorization': 'Bearer $apiKey', 'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'model': model,
-          'messages': [
-            {'role': 'system', 'content': isEs ? 'Eres un asistente de consumo de agua para facturacion.' : 'You are a water consumption assistant for invoicing.'},
-            {'role': 'user', 'content': prompt},
-          ],
-        }),
-      );
-
-      if (r1.statusCode >= 200 && r1.statusCode < 300) {
-        final b = jsonDecode(r1.body);
-        text = b['choices']?[0]?['message']?['content']?.toString();
-      } else if (r1.statusCode == 401) {
-        throw Exception(isEs ? 'API Key de OpenAI invalida' : 'Invalid OpenAI API Key');
-      } else if (r1.statusCode == 429) {
-        throw Exception(isEs ? 'Limite de uso de OpenAI alcanzado' : 'OpenAI rate limit reached');
-      } else {
-        throw Exception(isEs ? 'Error de OpenAI (${r1.statusCode}): ${r1.body}' : 'OpenAI error (${r1.statusCode}): ${r1.body}');
-      }
-    } catch (e) {
-      if (e is Exception && e.toString().contains('OpenAI')) rethrow;
-      throw Exception(isEs ? 'Error de conexion con OpenAI: $e' : 'Connection error with OpenAI: $e');
-    }
-
-    if (text == null || text.trim().isEmpty) {
-      throw Exception(isEs ? 'La IA no genero ninguna respuesta' : 'The AI did not generate any response');
-    }
-    return text.trim();
+    throw StateError('Las recomendaciones se gestionan desde el backend. No se envían datos personales desde el móvil.');
   }
 }

@@ -111,7 +111,7 @@ class _MeasurementPageOfflineState extends State<MeasurementPageOffline> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: cs.error.withOpacity(0.1),
+                    color: cs.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -179,7 +179,7 @@ class _MeasurementPageOfflineState extends State<MeasurementPageOffline> {
                       Text(
                         'Fecha: ${_formatDate(DateTime.now())}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: cs.onSurface.withOpacity(0.7),
+                              color: cs.onSurface.withValues(alpha: 0.7),
                             ),
                       ),
                     ],

@@ -27,7 +27,6 @@ class HomePageFunctions {
       final typed = invoices.cast<Map<String, dynamic>>();
       return typed;
     } catch (e) {
-      print('Error obteniendo facturas recientes: $e');
       return [];
     }
   }
@@ -44,7 +43,6 @@ class HomePageFunctions {
       });
       return typed;
     } catch (e) {
-      print('Error obteniendo medidores recientes: $e');
       return [];
     }
   }

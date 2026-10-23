@@ -30,7 +30,6 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
         // Esperar 5 segundos antes de actualizar
         await Future.delayed(const Duration(seconds: 5));
       } catch (e) {
-        print('Error en stream de personas: $e');
         yield [];
         await Future.delayed(const Duration(seconds: 5));
       }
@@ -119,7 +118,7 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: cs.error.withOpacity(0.1),
+                          color: cs.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -291,7 +290,6 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
                                         try {
                                           await QrService.createUserQr(personId: result['id']);
                                         } catch (e) {
-                                          print('Error generando QR tras crear usuario (offline page): $e');
                                           if (context.mounted) {
                                             ScaffoldMessenger.of(context).showSnackBar(
                                               SnackBar(content: Text('Usuario creado, pero error al generar QR: $e')),
@@ -360,13 +358,13 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
             onPressed: () async {
               try {
                 await _unifiedService.syncData();
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Sincronización completada')),
                   );
                 }
               } catch (e) {
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Error al sincronizar: $e')),
                   );
@@ -530,7 +528,6 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
                                         }
                                         messenger.showSnackBar(const SnackBar(content: Text('QR generado')));
                                       } catch (e) {
-                                        print('Error al generar QR manual (offline page): $e');
                                         messenger.showSnackBar(SnackBar(content: Text('Error al generar QR: $e')));
                                       }
                                     },
@@ -741,7 +738,6 @@ class _UsersMeasurementsPageOfflineState extends State<UsersMeasurementsPageOffl
         yield meters;
         await Future.delayed(const Duration(seconds: 5));
       } catch (e) {
-        print('Error en stream de medidores: $e');
         yield [];
         await Future.delayed(const Duration(seconds: 5));
       }

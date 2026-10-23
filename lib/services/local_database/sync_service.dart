@@ -28,18 +28,14 @@ class SyncService {
 
   Future<void> syncAllData() async {
     if (!await isOnline()) {
-      print('Sin conexión a internet, sincronización cancelada');
       return;
     }
 
     try {
-      print('Iniciando sincronización...');
       await _syncPeople();
       await _syncMeters();
       await _syncQueue();
-      print('Sincronización completada exitosamente');
     } catch (e) {
-      print('Error durante la sincronización: $e');
       rethrow;
     }
   }
@@ -47,12 +43,10 @@ class SyncService {
   Future<void> _syncPeople() async {
     try {
       final pendingPeople = await _dbHelper.getPeoplePendingSync();
-      print('Sincronizando ${pendingPeople.length} personas...');
       for (final person in pendingPeople) {
         await _syncPerson(person);
       }
     } catch (e) {
-      print('Error sincronizando personas: $e');
       rethrow;
     }
   }
@@ -103,15 +97,10 @@ class SyncService {
           await _dbHelper.updatePersonSyncStatus(person.id!, 'synced', serverId: serverId);
           try {
             await QrService.createUserQr(personId: serverId);
-            print('QR generado automáticamente para persona sincronizada: $serverId');
-          } catch (e) {
-            print('Error generando QR para persona sincronizada $serverId: $e');
-          }
+          } catch (_) { /* Legacy best-effort operation; the durable queue retains failed work. */ }
         }
       }
-      print('Persona sincronizada: ${person.fullName}');
     } catch (e) {
-      print('Error sincronizando persona ${person.fullName}: $e');
       await _dbHelper.updatePersonSyncStatus(person.id!, 'error');
       rethrow;
     }
@@ -120,12 +109,10 @@ class SyncService {
   Future<void> _syncMeters() async {
     try {
       final pendingMeters = await _dbHelper.getMetersPendingSync();
-      print('Sincronizando ${pendingMeters.length} medidores...');
       for (final meter in pendingMeters) {
         await _syncMeter(meter);
       }
     } catch (e) {
-      print('Error sincronizando medidores: $e');
       rethrow;
     }
   }
@@ -134,7 +121,6 @@ class SyncService {
     try {
       final person = await _dbHelper.getPersonById(meter.peopleId);
       if (person == null || person.serverId == null) {
-        print('Persona no encontrada o no sincronizada para medidor');
         return;
       }
 
@@ -150,9 +136,7 @@ class SyncService {
       if (serverId != null) {
         await _dbHelper.updateMeterSyncStatus(meter.id!, 'synced', serverId: serverId);
       }
-      print('Medidor sincronizado para: ${person.fullName}');
     } catch (e) {
-      print('Error sincronizando medidor: $e');
       await _dbHelper.updateMeterSyncStatus(meter.id!, 'error');
       rethrow;
     }
@@ -161,12 +145,10 @@ class SyncService {
   Future<void> _syncQueue() async {
     try {
       final pendingItems = await _dbHelper.getPendingSyncItems();
-      print('Sincronizando ${pendingItems.length} operaciones pendientes...');
       for (final item in pendingItems) {
         await _processSyncQueueItem(item);
       }
     } catch (e) {
-      print('Error procesando cola de sincronización: $e');
       rethrow;
     }
   }
@@ -204,13 +186,10 @@ class SyncService {
           }
           break;
         default:
-          print('Tabla no soportada en cola de sync: ${item.tableName}');
       }
 
       await _dbHelper.deleteSyncQueueItem(item.id!);
-      print('Operación ${item.operation} en ${item.tableName} sincronizada');
     } catch (e) {
-      print('Error procesando item de cola: $e');
       rethrow;
     }
   }
@@ -227,28 +206,22 @@ class SyncService {
     if (await isOnline()) {
       try {
         await syncAllData();
-      } catch (e) {
-        print('Error en sincronización automática: $e');
-      }
+      } catch (_) { /* Legacy best-effort operation; the durable queue retains failed work. */ }
     }
   }
 
   Future<void> syncFromServer() async {
     if (!await isOnline()) {
-      print('Sin conexión a internet, no se pueden cargar datos del servidor');
       return;
     }
 
     try {
-      print('Cargando datos desde el servidor...');
       final people = await _personService.getAll(size: 1000);
 
       for (final personData in people) {
         await _saveServerPersonToLocal(personData as Map<String, dynamic>);
       }
-      print('Datos del servidor cargados exitosamente');
     } catch (e) {
-      print('Error cargando datos del servidor: $e');
       rethrow;
     }
   }
@@ -290,13 +263,11 @@ class SyncService {
 
       await _dbHelper.insertPerson(person);
     } catch (e) {
-      print('Error guardando persona del servidor: $e');
       rethrow;
     }
   }
 
   Future<void> clearLocalData() async {
     await _dbHelper.clearAll();
-    print('Base de datos local limpiada');
   }
 }

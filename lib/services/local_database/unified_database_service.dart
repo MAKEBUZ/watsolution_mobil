@@ -38,7 +38,6 @@ class UnifiedDatabaseService {
         return localPeople.map((person) => _localPersonToMap(person)).toList();
       }
     } catch (e) {
-      print('Error obteniendo personas: $e');
       final localPeople = await _localDb.getAllPeople();
       return localPeople.map((person) => _localPersonToMap(person)).toList();
     }
@@ -96,7 +95,6 @@ class UnifiedDatabaseService {
         return _localPersonToMap(localPerson.copyWith(id: personId));
       }
     } catch (e) {
-      print('Error creando persona: $e');
       rethrow;
     }
   }
@@ -115,7 +113,6 @@ class UnifiedDatabaseService {
         return localMeters.map((meter) => _localMeterToMap(meter)).toList();
       }
     } catch (e) {
-      print('Error obteniendo medidores: $e');
       final localMeters = await _localDb.getMetersByPersonId(personId);
       return localMeters.map((meter) => _localMeterToMap(meter)).toList();
     }
@@ -161,7 +158,6 @@ class UnifiedDatabaseService {
         return _localMeterToMap(localMeter.copyWith(id: meterId));
       }
     } catch (e) {
-      print('Error creando medidor: $e');
       rethrow;
     }
   }

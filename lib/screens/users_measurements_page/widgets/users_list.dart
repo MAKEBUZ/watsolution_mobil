@@ -235,14 +235,10 @@ class _MetersAndInvoicesSectionState extends State<_MetersAndInvoicesSection> {
       _error = null;
     });
     try {
-      print('[MetersSection] Cargando medidores para personId=${widget.personId}...');
       final meters = await MeterService.instance.getByPersonId(widget.personId);
-      print('[MetersSection] Medidores recibidos: ${meters.length}');
-      print('[MetersSection] Primer medidor: ${meters.isNotEmpty ? meters.first : null}');
 
-      print('[MetersSection] Cargando facturas para personId=${widget.personId}...');
+
       final invoices = await InvoiceService.instance.getByPersonId(widget.personId);
-      print('[MetersSection] Facturas recibidas: ${invoices.length}');
 
       if (mounted) {
         setState(() {
@@ -251,9 +247,8 @@ class _MetersAndInvoicesSectionState extends State<_MetersAndInvoicesSection> {
           _loading = false;
         });
       }
-    } catch (e, st) {
-      print('[MetersSection] Error cargando datos: $e');
-      print(st);
+    } catch (e) {
+
       if (mounted) {
         setState(() {
           _error = e.toString();

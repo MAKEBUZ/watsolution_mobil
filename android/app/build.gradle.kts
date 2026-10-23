@@ -5,6 +5,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val releaseBuild = gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }
+val releaseStore = System.getenv("ANDROID_KEYSTORE_PATH")
+val releaseApplicationId = System.getenv("ANDROID_APPLICATION_ID")
+if (releaseBuild && (releaseStore.isNullOrBlank() || releaseApplicationId.isNullOrBlank() || releaseApplicationId.startsWith("com.example") ||
+    System.getenv("ANDROID_KEYSTORE_PASSWORD").isNullOrBlank() || System.getenv("ANDROID_KEY_ALIAS").isNullOrBlank() || System.getenv("ANDROID_KEY_PASSWORD").isNullOrBlank())) {
+    throw GradleException("Release requires the approved application ID and private signing configuration.")
+}
+
 android {
     namespace = "com.example.watsolution_mobil"
     compileSdk = flutter.compileSdkVersion
@@ -21,20 +29,29 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.watsolution_mobil"
+        applicationId = releaseApplicationId ?: "com.example.watsolution_mobil"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 28
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (!releaseStore.isNullOrBlank()) {
+            create("production") {
+                storeFile = file(releaseStore)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            if (!releaseStore.isNullOrBlank()) signingConfig = signingConfigs.getByName("production")
         }
     }
 }

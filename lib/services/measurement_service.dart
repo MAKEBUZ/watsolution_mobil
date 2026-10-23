@@ -1,7 +1,7 @@
-import '../../services/api/meter_service.dart';
-import '../../services/api/invoice_service.dart';
-import '../../services/local_database/unified_database_service.dart';
-import '../../services/local_database/sync_service.dart';
+import '../services/api/meter_service.dart';
+import '../services/api/invoice_service.dart';
+import '../services/local_database/unified_database_service.dart';
+import '../services/local_database/sync_service.dart';
 
 class MeasurementService {
   static final MeasurementService instance = MeasurementService._init();

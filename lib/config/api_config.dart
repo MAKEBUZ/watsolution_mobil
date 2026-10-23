@@ -1,13 +1,20 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
 class ApiConfig {
   static String? _baseUrl;
 
-  static Future<void> load() async {
-    await dotenv.load(fileName: ".env");
-    _baseUrl = dotenv.env['API_BASE_URL']?.trim();
+  static Future<void> load({String? origin}) async {
+    _baseUrl = (origin ?? const String.fromEnvironment('API_BASE_URL')).trim();
+    final uri = Uri.tryParse(_baseUrl!);
+    if (uri == null ||
+        uri.scheme != 'https' ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty ||
+        uri.hasQuery ||
+        uri.hasFragment ||
+        (uri.path.isNotEmpty && uri.path != '/')) {
+      throw StateError('Se requiere un origen HTTPS válido');
+    }
     if (_baseUrl == null || _baseUrl!.isEmpty) {
-      throw Exception('API_BASE_URL falta o está vacío en .env');
+      throw Exception('Falta API_BASE_URL en la configuración pública');
     }
     // Asegurar que no termine en /
     if (_baseUrl!.endsWith('/')) {
@@ -28,7 +35,8 @@ class ApiConfig {
   static String get adminStats => '$baseUrl/api/admin/stats';
   static String get adminDashboard => '$baseUrl/api/admin/dashboard';
   static String get adminActivity => '$baseUrl/api/admin/activity';
-  static String get adminBillingGenerate => '$baseUrl/api/admin/billing/generate';
+  static String get adminBillingGenerate =>
+      '$baseUrl/api/admin/billing/generate';
   static String get boldHash => '$baseUrl/api/bold/hash';
   static String get boldWebhook => '$baseUrl/api/bold/webhook';
   static String get boldResult => '$baseUrl/api/bold/result';

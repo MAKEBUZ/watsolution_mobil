@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'dart:convert';
 import '../../l10n/app_localizations.dart';
-import '../../services/api/person_service.dart';
-import '../../services/local_database/unified_database_service.dart';
+import '../services/api/person_service.dart';
+import '../services/local_database/unified_database_service.dart';
 import 'measurement_registration_simple_page.dart';
 import 'select_user_for_measurement_page/widgets/measurement_form_sheet.dart';
 

@@ -102,7 +102,7 @@ class _MeasurementRegistrationSimplePageState extends State<MeasurementRegistrat
 
       int? addressId;
       String? addressLabel;
-      if (user != null && user.isNotEmpty) {
+      if (user.isNotEmpty) {
         // El backend retorna address como objeto anidado {id, neighborhood...}
         final nestedAddress = user['address'] as Map<String, dynamic>?;
         addressId = nestedAddress?['id'] as int? ?? user['addressId'] ?? user['address_id'];

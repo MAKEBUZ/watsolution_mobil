@@ -204,9 +204,7 @@ class _CreateUserFormSheetState extends State<CreateUserFormSheet> {
                               if (personId != null) {
                                 try {
                                   await QrService.createUserQr(personId: personId);
-                                } catch (e) {
-                                  print('Error generando QR tras crear usuario: $e');
-                                }
+                                } catch (_) { /* Legacy best-effort operation; the durable queue retains failed work. */ }
                               }
                             }
 
