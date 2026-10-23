@@ -1,9 +1,23 @@
 class ApiConfig {
   static String? _baseUrl;
+  static String? _storageOrigin;
+  static const railwayProductionOrigin =
+      'https://back-production-b5f3.up.railway.app';
+  static const awsProductionOrigin =
+      'https://api.watsolution.3-142-23-99.sslip.io';
 
-  static Future<void> load({String? origin}) async {
-    _baseUrl = (origin ?? const String.fromEnvironment('API_BASE_URL')).trim();
-    final uri = Uri.tryParse(_baseUrl!);
+  static Future<void> load({
+    String? origin,
+    bool preserveRailwayStorage = const bool.fromEnvironment(
+      'PRESERVE_RAILWAY_PRODUCTION_STORAGE',
+    ),
+  }) async {
+    // Do not leave a previous configuration usable after a failed load.
+    _baseUrl = null;
+    _storageOrigin = null;
+    var baseUrl = (origin ?? const String.fromEnvironment('API_BASE_URL'))
+        .trim();
+    final uri = Uri.tryParse(baseUrl);
     if (uri == null ||
         uri.scheme != 'https' ||
         uri.host.isEmpty ||
@@ -13,16 +27,25 @@ class ApiConfig {
         (uri.path.isNotEmpty && uri.path != '/')) {
       throw StateError('Se requiere un origen HTTPS válido');
     }
-    if (_baseUrl == null || _baseUrl!.isEmpty) {
+    if (baseUrl.isEmpty) {
       throw Exception('Falta API_BASE_URL en la configuración pública');
     }
     // Asegurar que no termine en /
-    if (_baseUrl!.endsWith('/')) {
-      _baseUrl = _baseUrl!.substring(0, _baseUrl!.length - 1);
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.substring(0, baseUrl.length - 1);
     }
+    // Enable only after restoring the same production database (including IDs
+    // and idempotency records). Keep encrypted data, keys and pending operations
+    // in their original namespace; never copy them into an unrelated backend.
+    if (preserveRailwayStorage && baseUrl != awsProductionOrigin) {
+      throw StateError('La migración local requiere el destino AWS autorizado');
+    }
+    _baseUrl = baseUrl;
+    _storageOrigin = preserveRailwayStorage ? railwayProductionOrigin : baseUrl;
   }
 
   static String get baseUrl => _baseUrl!;
+  static String get storageOrigin => _storageOrigin!;
 
   static String get authenticate => '$baseUrl/api/authenticate';
   static String get register => '$baseUrl/api/register';

@@ -42,8 +42,8 @@ class FieldSession extends ChangeNotifier {
   Timer? _syncTimer, _permitTimer;
   Future<void>? _syncing, _refreshing, _preparing;
   String _installation = '';
-  String get _sessionKey => 'session:${ApiConfig.baseUrl}';
-  String get _publishedSessionKey => 'published-session:${ApiConfig.baseUrl}';
+  String get _sessionKey => 'session:${ApiConfig.storageOrigin}';
+  String get _publishedSessionKey => 'published-session:${ApiConfig.storageOrigin}';
   bool get offlineReady => onlineOnly && store != null && preparedAt != null;
   String get login => credentials?['login']?.toString() ?? '';
   bool get isAdmin =>
@@ -131,7 +131,7 @@ class FieldSession extends ChangeNotifier {
   }
 
   String _submissionKey(int personId) =>
-      'submission:${ApiConfig.baseUrl}:${credentials?['id']}:$personId';
+      'submission:${ApiConfig.storageOrigin}:${credentials?['id']}:$personId';
 
   Future<void> resolveSubmission(int personId) async {
     if (locked || !isAdmin) throw StateError('Inicia sesión de nuevo.');
@@ -371,7 +371,7 @@ class FieldSession extends ChangeNotifier {
         );
       }
       final opened = await FieldStore.open(
-        '${ApiConfig.baseUrl}|published',
+        '${ApiConfig.storageOrigin}|published',
         account.id,
         deviceProtected: true,
       );
@@ -412,7 +412,7 @@ class FieldSession extends ChangeNotifier {
     }
     await quarantineLegacyDatabase();
     _requireGeneration(generation);
-    final opened = await FieldStore.open(ApiConfig.baseUrl, account.id);
+    final opened = await FieldStore.open(ApiConfig.storageOrigin, account.id);
     if (generation != _generation) {
       await opened.close();
       throw StateError('La sesión cambió.');
@@ -450,7 +450,7 @@ class FieldSession extends ChangeNotifier {
         throw StateError('Acceso no permitido.');
       }
       final opened = await FieldStore.open(
-        '${ApiConfig.baseUrl}|published',
+        '${ApiConfig.storageOrigin}|published',
         saved['id'] as String,
         deviceProtected: true,
       );
@@ -480,7 +480,7 @@ class FieldSession extends ChangeNotifier {
     _requireGeneration(generation);
     if (raw == null) throw StateError('Inicia sesión con internet');
     final saved = Map<String, dynamic>.from(jsonDecode(raw));
-    final opened = await FieldStore.open(ApiConfig.baseUrl, saved['id']);
+    final opened = await FieldStore.open(ApiConfig.storageOrigin, saved['id']);
     if (generation != _generation) {
       await opened.close();
       throw StateError('La sesión cambió.');
