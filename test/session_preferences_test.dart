@@ -6,6 +6,12 @@ import 'field_app_test.dart' show PreviewSession;
 
 class ConfirmSession extends PreviewSession {
   int logouts = 0;
+  int syncs = 0;
+  @override
+  Future<void> sync() async {
+    syncs++;
+  }
+
   @override
   Future<void> logout() async {
     logouts++;
@@ -31,6 +37,24 @@ void main() {
           },
         );
   });
+  testWidgets(
+    'returning from connectivity settings retries sync only while unlocked',
+    (tester) async {
+      final session = ConfirmSession();
+      await tester.pumpWidget(FieldApp(session: session));
+      await tester.pumpAndSettle();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(session.syncs, 1);
+      await session.lock();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(session.syncs, 1);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
   testWidgets('logout requires confirmation and cancel preserves session', (
     tester,
   ) async {

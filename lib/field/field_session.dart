@@ -15,6 +15,7 @@ import 'api_contract.dart';
 import 'published_work.dart';
 import 'published_outbox.dart';
 import 'billing_calculation.dart';
+import 'storage_migration.dart';
 
 class FieldSession extends ChangeNotifier {
   static const publicKey = String.fromEnvironment('OFFLINE_VERIFY_KEY_BASE64');
@@ -314,6 +315,7 @@ class FieldSession extends ChangeNotifier {
   }
 
   Future<void> initialize() async {
+    await migrateProductionStorage(secureSession);
     await Hive.initFlutter();
     if (await Hive.boxExists('app')) {
       final preferences = await Hive.openBox('app');

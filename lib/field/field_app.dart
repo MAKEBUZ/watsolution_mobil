@@ -146,6 +146,9 @@ class _FieldAppState extends State<FieldApp> with WidgetsBindingObserver {
       final deadline = inactivityDeadline;
       if (deadline != null && !DateTime.now().isBefore(deadline)) {
         unawaited(session.lock());
+      } else {
+        // Android may pause the periodic timer while the app is in background.
+        unawaited(session.sync());
       }
     }
   }

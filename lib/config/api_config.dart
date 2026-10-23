@@ -1,22 +1,21 @@
 class ApiConfig {
   static String? _baseUrl;
   static String? _storageOrigin;
-  static const railwayProductionOrigin =
-      'https://back-production-b5f3.up.railway.app';
+  static const productionStorage = 'watsolution-production-v1';
   static const awsProductionOrigin =
       'https://api.watsolution.3-142-23-99.sslip.io';
 
-  static Future<void> load({
-    String? origin,
-    bool preserveRailwayStorage = const bool.fromEnvironment(
-      'PRESERVE_RAILWAY_PRODUCTION_STORAGE',
-    ),
-  }) async {
+  static Future<void> load({String? origin}) async {
     // Do not leave a previous configuration usable after a failed load.
     _baseUrl = null;
     _storageOrigin = null;
-    var baseUrl = (origin ?? const String.fromEnvironment('API_BASE_URL'))
-        .trim();
+    var baseUrl =
+        (origin ??
+                const String.fromEnvironment(
+                  'API_BASE_URL',
+                  defaultValue: awsProductionOrigin,
+                ))
+            .trim();
     final uri = Uri.tryParse(baseUrl);
     if (uri == null ||
         uri.scheme != 'https' ||
@@ -34,14 +33,10 @@ class ApiConfig {
     if (baseUrl.endsWith('/')) {
       baseUrl = baseUrl.substring(0, baseUrl.length - 1);
     }
-    // Enable only after restoring the same production database (including IDs
-    // and idempotency records). Keep encrypted data, keys and pending operations
-    // in their original namespace; never copy them into an unrelated backend.
-    if (preserveRailwayStorage && baseUrl != awsProductionOrigin) {
-      throw StateError('La migración local requiere el destino AWS autorizado');
-    }
     _baseUrl = baseUrl;
-    _storageOrigin = preserveRailwayStorage ? railwayProductionOrigin : baseUrl;
+    _storageOrigin = baseUrl == awsProductionOrigin
+        ? productionStorage
+        : baseUrl;
   }
 
   static String get baseUrl => _baseUrl!;

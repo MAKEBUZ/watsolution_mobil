@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'package:cryptography/cryptography.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'operation_policy.dart';
+import 'storage_migration.dart';
 
 const secureSession = FlutterSecureStorage(
   aOptions: AndroidOptions(resetOnError: false),
@@ -40,11 +40,31 @@ class FieldStore {
     if (!Platform.isAndroid && !Platform.isIOS) {
       throw UnsupportedError('El almacén de campo requiere Android o iOS.');
     }
-    final hash = await Sha256().hash(utf8.encode('$environment|$accountId'));
-    final scope = base64UrlEncode(hash.bytes).replaceAll('=', '');
+    final originalScope = await storageScope(environment, accountId);
+    final alias = await secureSession.read(
+      key: 'field-scope-alias:$originalScope',
+    );
+    if (alias != null && !RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(alias)) {
+      throw StateError('La referencia del almacén local no es válida.');
+    }
+    if (alias != null &&
+        alias != originalScope &&
+        await databaseExists(
+          p.join(await getDatabasesPath(), 'field_$originalScope.db'),
+        )) {
+      throw StateError(
+        'Hay dos almacenes locales; se conservaron para recuperación.',
+      );
+    }
+    final scope = alias ?? originalScope;
     final path = p.join(await getDatabasesPath(), 'field_$scope.db');
     final keyStorage = deviceProtected ? secureSession : secureKeys;
     var key = await keyStorage.read(key: scope);
+    if (alias != null && (!await databaseExists(path) || key == null)) {
+      throw StateError(
+        'Falta el almacén anterior o su clave; no se borró ningún dato.',
+      );
+    }
     if (key == null) {
       if (await databaseExists(path)) {
         throw StateError(
