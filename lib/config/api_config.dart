@@ -2,6 +2,8 @@ class ApiConfig {
   static String? _baseUrl;
   static String? _storageOrigin;
   static const productionStorage = 'watsolution-production-v1';
+  static const productionOrigin = 'https://api.watsolution.online';
+  // Keep the previous endpoint mapped to the same encrypted local workspace.
   static const awsProductionOrigin =
       'https://api.watsolution.3-142-23-99.sslip.io';
 
@@ -13,7 +15,7 @@ class ApiConfig {
         (origin ??
                 const String.fromEnvironment(
                   'API_BASE_URL',
-                  defaultValue: awsProductionOrigin,
+                  defaultValue: productionOrigin,
                 ))
             .trim();
     final uri = Uri.tryParse(baseUrl);
@@ -34,7 +36,8 @@ class ApiConfig {
       baseUrl = baseUrl.substring(0, baseUrl.length - 1);
     }
     _baseUrl = baseUrl;
-    _storageOrigin = baseUrl == awsProductionOrigin
+    _storageOrigin =
+        (baseUrl == productionOrigin || baseUrl == awsProductionOrigin)
         ? productionStorage
         : baseUrl;
   }

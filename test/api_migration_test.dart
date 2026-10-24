@@ -7,7 +7,7 @@ import 'package:watsolution_mobil/field/storage_migration.dart';
 void main() {
   test('AWS defaults to a provider-independent local scope', () async {
     await ApiConfig.load();
-    expect(ApiConfig.baseUrl, ApiConfig.awsProductionOrigin);
+    expect(ApiConfig.baseUrl, ApiConfig.productionOrigin);
     expect(ApiConfig.storageOrigin, ApiConfig.productionStorage);
     await ApiConfig.load(origin: 'https://test.example.com');
     expect(ApiConfig.storageOrigin, 'https://test.example.com');
@@ -20,6 +20,43 @@ void main() {
       expect(() => ApiConfig.baseUrl, throwsA(isA<TypeError>()));
     }
   });
+  test(
+    'domain change keeps account database, session and outbox namespaces',
+    () async {
+      for (final accountId in ['7', '13']) {
+        await ApiConfig.load(origin: ApiConfig.awsProductionOrigin);
+        final oldOrigin = ApiConfig.storageOrigin;
+        final oldScope = await storageScope(oldOrigin, accountId);
+        final oldPublishedScope = await storageScope(
+          '$oldOrigin|published',
+          accountId,
+        );
+        await ApiConfig.load(origin: '${ApiConfig.productionOrigin}/');
+        expect(ApiConfig.storageOrigin, oldOrigin);
+        expect(
+          await storageScope(ApiConfig.storageOrigin, accountId),
+          oldScope,
+        );
+        expect(
+          await storageScope('${ApiConfig.storageOrigin}|published', accountId),
+          oldPublishedScope,
+        );
+        final storedEntries = {
+          'session:$oldOrigin': jsonEncode({'id': accountId}),
+          'submission:$oldOrigin:$accountId:3': 'pending-reading',
+          'field-scope-alias:$oldScope': 'existing-encrypted-database',
+        };
+        final plan = await planProductionStorageMigration(storedEntries);
+        expect(plan.writes, isEmpty);
+        expect(plan.removals, isEmpty);
+      }
+      // A similarly named but untrusted server must never inherit production data.
+      await ApiConfig.load(
+        origin: 'https://api.watsolution.online.example.com',
+      );
+      expect(ApiConfig.storageOrigin, isNot(ApiConfig.productionStorage));
+    },
+  );
   test(
     'migration preserves encrypted scope and uncertain submissions',
     () async {

@@ -76,7 +76,7 @@ Future<StorageMigrationPlan> planProductionStorageMigration(
 }
 
 Future<void> migrateProductionStorage(FlutterSecureStorage storage) async {
-  if (ApiConfig.baseUrl != ApiConfig.awsProductionOrigin) return;
+  if (ApiConfig.storageOrigin != ApiConfig.productionStorage) return;
   final plan = await planProductionStorageMigration(await storage.readAll());
   // Copy and verify every key before removing old names. Repeating after a
   // process interruption is safe and never overwrites differing submissions.
