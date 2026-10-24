@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'operation_policy.dart';
 import 'storage_migration.dart';
+import 'local_retention.dart';
 
 const secureSession = FlutterSecureStorage(
   aOptions: AndroidOptions(resetOnError: false),
@@ -77,13 +78,13 @@ class FieldStore {
     final db = await openDatabase(
       path,
       password: key,
-      version: 1,
+      version: 2,
       onCreate: (db, _) async {
         await db.execute(
           'CREATE TABLE people (id INTEGER PRIMARY KEY, payload TEXT NOT NULL)',
         );
         await db.execute(
-          'CREATE TABLE outbox (id TEXT PRIMARY KEY, person_id INTEGER NOT NULL, command TEXT NOT NULL, status TEXT NOT NULL, result TEXT, error TEXT, attempts INTEGER NOT NULL DEFAULT 0, retry_at INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)',
+          'CREATE TABLE outbox (id TEXT PRIMARY KEY, person_id INTEGER NOT NULL, command TEXT NOT NULL, status TEXT NOT NULL, result TEXT, error TEXT, attempts INTEGER NOT NULL DEFAULT 0, retry_at INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, transport TEXT)',
         );
         await db.execute(
           'CREATE INDEX outbox_status ON outbox(status, retry_at)',
@@ -91,6 +92,11 @@ class FieldStore {
         await db.execute(
           'CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
         );
+      },
+      onUpgrade: (db, oldVersion, _) async {
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE outbox ADD COLUMN transport TEXT');
+        }
       },
     );
     final cipher = await db.rawQuery('PRAGMA cipher_version');
@@ -246,6 +252,23 @@ class FieldStore {
       );
     }
   }
+
+  Future<int> purgeConfirmedCopies(DateTime now) => db.transaction((txn) async {
+    final rows = await txn.query(
+      'outbox',
+      where: 'status = ?',
+      whereArgs: ['confirmed'],
+    );
+    var removed = 0;
+    for (final row in rows.where((row) => canPurgeConfirmedCopy(row, now))) {
+      removed += await txn.delete(
+        'outbox',
+        where: 'id = ? AND status = ?',
+        whereArgs: [row['id'], 'confirmed'],
+      );
+    }
+    return removed;
+  });
 
   Future<void> withdrawPeople(List<int> ids) => db.transaction((txn) async {
     for (final id in ids) {

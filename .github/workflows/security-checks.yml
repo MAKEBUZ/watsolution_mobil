@@ -23,6 +23,18 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze --no-pub
       - run: flutter test --no-pub
+      - name: Scan tracked source for secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz -o "$RUNNER_TEMP/gitleaks.tar.gz"
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+          mkdir "$RUNNER_TEMP/tracked-source"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/tracked-source"
+          "$RUNNER_TEMP/gitleaks" dir "$RUNNER_TEMP/tracked-source" --redact --no-banner
+      - name: Export Dart dependency inventory
+        run: dart pub deps --json > "$RUNNER_TEMP/watsolution-dart-dependencies.json"
       - run: flutter build apk --debug --no-pub
       - name: Reject bundled environment files
         run: |

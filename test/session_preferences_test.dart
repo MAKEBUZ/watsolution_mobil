@@ -85,7 +85,9 @@ void main() {
     expect(find.byType(TextField), findsNothing);
     await tester.tap(find.text('Iniciar sesión'));
     await tester.pumpAndSettle();
-    expect(find.byType(TextField), findsNWidgets(2));
+    expect(find.widgetWithText(TextField, 'Usuario'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Contraseña'), findsOneWidget);
+    expect(find.byType(TextField), findsNWidgets(3)); // Includes optional MFA.
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('Volcán de WatSolution'), findsOneWidget);

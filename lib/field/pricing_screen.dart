@@ -57,20 +57,22 @@ class _PricingScreenState extends State<PricingScreen> {
     body: ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const Text(
-          'Define los valores que se completarán automáticamente en las nuevas facturas de esta cuenta en esta tablet.',
+        Text(
+          widget.session.secureField
+              ? 'Tarifa preparada para las nuevas lecturas, incluso sin internet. Un administrador puede publicar cambios con conexión. Las lecturas ya guardadas conservan su tarifa.'
+              : 'Define los valores que se completarán automáticamente en las nuevas facturas de esta cuenta en esta tablet.',
         ),
         const SizedBox(height: 24),
         TextField(
           controller: rate,
-          enabled: !saving,
+          enabled: !saving && widget.session.isAdmin,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: const InputDecoration(labelText: 'Precio por m³ (COP)'),
         ),
         const SizedBox(height: 20),
         TextField(
           controller: fixed,
-          enabled: !saving,
+          enabled: !saving && widget.session.isAdmin,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: const InputDecoration(
             labelText: 'Tarifa fija (COP)',
@@ -87,11 +89,12 @@ class _PricingScreenState extends State<PricingScreen> {
             error!,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
-        FilledButton.icon(
-          onPressed: saving ? null : save,
-          icon: const Icon(Icons.save_outlined),
-          label: Text(saving ? 'Guardando…' : 'Guardar parámetros'),
-        ),
+        if (widget.session.isAdmin)
+          FilledButton.icon(
+            onPressed: saving ? null : save,
+            icon: const Icon(Icons.save_outlined),
+            label: Text(saving ? 'Guardando…' : 'Guardar parámetros'),
+          ),
       ],
     ),
   );

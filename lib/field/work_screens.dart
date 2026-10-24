@@ -78,7 +78,11 @@ Future<void> downloadInvoice(
         });
     if (saved == true && context.mounted && !session.locked) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Factura PDF guardada en Descargas.')),
+        const SnackBar(
+          content: Text(
+            'Factura guardada en Descargas. Esa copia queda fuera del almacenamiento protegido de la app.',
+          ),
+        ),
       );
     }
   } catch (_) {
@@ -515,7 +519,8 @@ class _OnlineMeasurementState extends State<OnlineMeasurement> {
             ? 'Escribe 0 si no hay cargo fijo adicional.'
             : null,
       ),
-      enabled: !saving,
+      enabled:
+          !saving && (!widget.session.secureField || widget.session.isAdmin),
     ),
   );
   Widget calculation() => FutureBuilder<List<Map<String, dynamic>>>(
@@ -814,7 +819,11 @@ class _OnlineMeasurementState extends State<OnlineMeasurement> {
             OutlinedButton.icon(
               onPressed: saving ? null : editPricing,
               icon: const Icon(Icons.price_change_outlined),
-              label: const Text('Configurar precio por m³ y tarifa fija'),
+              label: Text(
+                widget.session.isAdmin
+                    ? 'Configurar precio por m³ y tarifa fija'
+                    : 'Consultar tarifa preparada',
+              ),
             ),
           const SizedBox(height: 12),
           if (invoice) ...[

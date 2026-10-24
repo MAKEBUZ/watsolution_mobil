@@ -142,6 +142,9 @@ class _FieldAppState extends State<FieldApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(session.retryRemoteLogout());
+    }
     if (state == AppLifecycleState.resumed && !session.locked) {
       final deadline = inactivityDeadline;
       if (deadline != null && !DateTime.now().isBefore(deadline)) {
@@ -314,7 +317,7 @@ class _FieldAppState extends State<FieldApp> with WidgetsBindingObserver {
       padding: const EdgeInsets.all(16),
       children: [
         const DashboardHeader(),
-        if (session.isAdmin && session.store != null) ...[
+        if (session.canWork && session.store != null) ...[
           const SizedBox(height: 12),
           FilledButton.tonalIcon(
             onPressed: session.busy
@@ -985,7 +988,32 @@ class _FieldAppState extends State<FieldApp> with WidgetsBindingObserver {
   Widget _settings(BuildContext context) => ListView(
     padding: const EdgeInsets.all(20),
     children: [
-      if (session.isAdmin && session.store != null)
+      if (session.store != null)
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Privacidad y conservación'),
+                const SizedBox(height: 8),
+                const Text(
+                  'Las lecturas pendientes se conservan cifradas. Puedes retirar copias locales confirmadas de más de 90 días; las facturas siguen disponibles en el historial con internet.',
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Los PDF que descargues quedan en Descargas y pueden abrirse desde otros visores. La impresión directa no necesita guardar un PDF.',
+                ),
+                TextButton.icon(
+                  onPressed: session.busy ? null : session.purgeConfirmedCopies,
+                  icon: const Icon(Icons.cleaning_services_outlined),
+                  label: const Text('Limpiar copias confirmadas antiguas'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      if (session.canWork && session.store != null)
         Card(
           child: ListTile(
             leading: const Icon(Icons.price_change_outlined),
@@ -1173,10 +1201,12 @@ class _Login extends StatefulWidget {
 class _LoginState extends State<_Login> {
   final username = TextEditingController();
   final password = TextEditingController();
+  final securityCode = TextEditingController();
   @override
   void dispose() {
     username.dispose();
     password.dispose();
+    securityCode.dispose();
     super.dispose();
   }
 
@@ -1248,6 +1278,21 @@ class _LoginState extends State<_Login> {
                     prefixIcon: Icon(Icons.lock_outline),
                   ),
                 ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: securityCode,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  autofillHints: const [AutofillHints.oneTimeCode],
+                  decoration: const InputDecoration(
+                    labelText:
+                        'Código de seguridad (si activaste el segundo factor)',
+                    helperText:
+                        'Acepta código del autenticador o código de recuperación.',
+                    helperMaxLines: 2,
+                    prefixIcon: Icon(Icons.verified_user_outlined),
+                  ),
+                ),
                 const SizedBox(height: 22),
                 FilledButton(
                   onPressed: widget.session.busy
@@ -1255,7 +1300,13 @@ class _LoginState extends State<_Login> {
                       : () async {
                           final value = password.text;
                           password.clear();
-                          await widget.session.signIn(username.text, value);
+                          final code = securityCode.text;
+                          securityCode.clear();
+                          await widget.session.signIn(
+                            username.text,
+                            value,
+                            code: code,
+                          );
                           widget.onUnlocked();
                         },
                   child: Text(

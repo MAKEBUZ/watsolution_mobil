@@ -4,7 +4,7 @@ import 'package:watsolution_mobil/field/field_app.dart';
 import 'package:watsolution_mobil/field/field_session.dart';
 
 class PreviewSession extends FieldSession {
-  PreviewSession() {
+  PreviewSession() : super(apiProfile: 'published') {
     locked = false;
     credentials = {'login': 'Operador de prueba', 'id': '2'};
     preparedAt = DateTime(2026, 10, 4);

@@ -14,6 +14,7 @@ import 'operation_policy.dart';
 import 'api_contract.dart';
 import 'published_work.dart';
 import 'published_outbox.dart';
+import 'secure_field_outbox.dart';
 import 'billing_calculation.dart';
 import 'storage_migration.dart';
 
@@ -21,8 +22,11 @@ class FieldSession extends ChangeNotifier {
   static const publicKey = String.fromEnvironment('OFFLINE_VERIFY_KEY_BASE64');
   static const profile = String.fromEnvironment(
     'MOBILE_API_PROFILE',
-    defaultValue: 'published',
+    defaultValue: 'field-v2',
   );
+  final String apiProfile;
+  final String verificationKey;
+  FieldSession({this.apiProfile = profile, this.verificationKey = publicKey});
   final Dio api = Dio(
     BaseOptions(
       connectTimeout: const Duration(seconds: 15),
@@ -44,19 +48,30 @@ class FieldSession extends ChangeNotifier {
   Future<void>? _syncing, _refreshing, _preparing;
   String _installation = '';
   String get _sessionKey => 'session:${ApiConfig.storageOrigin}';
-  String get _publishedSessionKey => 'published-session:${ApiConfig.storageOrigin}';
+  String get _publishedSessionKey =>
+      'published-session:${ApiConfig.storageOrigin}';
+  String get _activeSessionKey =>
+      onlineOnly ? _publishedSessionKey : _sessionKey;
+  String get _revocationsKey =>
+      'pending-revocations:${ApiConfig.storageOrigin}';
+  bool get secureField => apiProfile == 'field-v2';
+  String? tariffId;
   bool get offlineReady => onlineOnly && store != null && preparedAt != null;
   String get login => credentials?['login']?.toString() ?? '';
   bool get isAdmin =>
       (credentials?['authorities'] as List?)?.contains('ROLE_ADMIN') ?? false;
-  bool get canAssign => !onlineOnly && isAdmin;
+  bool get canWork =>
+      isAdmin ||
+      ((credentials?['authorities'] as List?)?.contains('ROLE_OPERATOR') ??
+          false);
+  bool get canAssign => (!onlineOnly || secureField) && isAdmin;
   int get pending =>
       operations.where((o) => isPendingOperation(o['status'])).length;
   List<Map<String, Object?>> get pendingOperations =>
       operations.where((o) => isPendingOperation(o['status'])).toList();
 
   Future<Map<String, dynamic>> invoiceReceipt(int invoiceId) async {
-    if (locked || !isAdmin) throw StateError('Inicia sesión para imprimir.');
+    if (locked || !canWork) throw StateError('Inicia sesión para imprimir.');
     for (final op in operations) {
       if (op['status'] != 'confirmed' || op['result'] is! String) continue;
       final result = jsonDecode(op['result'] as String);
@@ -71,7 +86,7 @@ class FieldSession extends ChangeNotifier {
   }
 
   PublishedWork get published {
-    if (locked || !isAdmin) {
+    if (locked || !canWork) {
       throw StateError('Se requiere una sesión administrativa vigente.');
     }
     return PublishedWork(_request);
@@ -80,7 +95,7 @@ class FieldSession extends ChangeNotifier {
   Future<List<Map<String, dynamic>>> measurementReference(
     Map<String, dynamic> person,
   ) async {
-    if (locked || !isAdmin || !people.any((p) => p['id'] == person['id'])) {
+    if (locked || !canWork || !people.any((p) => p['id'] == person['id'])) {
       throw StateError('Persona no disponible.');
     }
     final generation = _generation;
@@ -155,9 +170,21 @@ class FieldSession extends ChangeNotifier {
       rate: rate,
       fixedCharge: fixedCharge,
     );
+    if (secureField) {
+      final response = await _request(
+        'POST',
+        '/api/mobile/tariff',
+        data: {'rate': rate, 'fixedCharge': fixedCharge},
+      );
+      tariffId = response.data['id'] as String;
+    }
     await store!.setMeta(
       'billingPrices',
-      jsonEncode({'rate': rate, 'fixedCharge': fixedCharge}),
+      jsonEncode({
+        'rate': rate,
+        'fixedCharge': fixedCharge,
+        if (tariffId != null) 'tariffId': tariffId,
+      }),
     );
     await reload();
     status = 'Tarifas guardadas para nuevas facturas en esta tablet.';
@@ -176,7 +203,7 @@ class FieldSession extends ChangeNotifier {
     }
     if (!onlineOnly ||
         locked ||
-        !isAdmin ||
+        !canWork ||
         !people.any((p) => p['id'] == personId)) {
       throw StateError('Persona no disponible para registro online.');
     }
@@ -198,6 +225,14 @@ class FieldSession extends ChangeNotifier {
           );
         }
         final person = people.firstWhere((p) => p['id'] == personId);
+        if (!isAdmin &&
+            (tariffId == null ||
+                billing['rate'] != defaultRate ||
+                billing['fixedCharge'] != defaultFixedCharge ||
+                billing['subsidy'] != 0 ||
+                billing['surcharges'] != 0)) {
+          throw StateError('Usa la tarifa preparada por administración.');
+        }
         final previous = person['previousReading'] as num?;
         for (final key in ['rate', 'fixedCharge', 'subsidy', 'surcharges']) {
           final value = billing[key];
@@ -233,6 +268,10 @@ class FieldSession extends ChangeNotifier {
               '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
           'observation': observation.trim(),
           'billing': Map<String, double>.of(billing),
+          if (tariffId != null &&
+              billing['rate'] == defaultRate &&
+              billing['fixedCharge'] == defaultFixedCharge)
+            'tariffId': tariffId,
           'previousMeterId': person['previousMeterId'],
           'previousReading': previous,
           'billingSummary': BillingCalculation(
@@ -316,6 +355,7 @@ class FieldSession extends ChangeNotifier {
 
   Future<void> initialize() async {
     await migrateProductionStorage(secureSession);
+    unawaited(retryRemoteLogout());
     await Hive.initFlutter();
     if (await Hive.boxExists('app')) {
       final preferences = await Hive.openBox('app');
@@ -327,7 +367,9 @@ class FieldSession extends ChangeNotifier {
         await secureSession.read(key: 'installation') ?? const Uuid().v4();
     await secureSession.write(key: 'installation', value: _installation);
     hasSavedSession = await secureSession.containsKey(
-      key: profile == 'secure-mobile-v1' ? _sessionKey : _publishedSessionKey,
+      key: apiProfile == 'secure-mobile-v1'
+          ? _sessionKey
+          : _publishedSessionKey,
     );
     notifyListeners();
   }
@@ -337,14 +379,23 @@ class FieldSession extends ChangeNotifier {
     persistAcrossBackgrounding: true,
   );
 
-  Future<void> signIn(String username, String password) => run(() async {
+  Future<void> signIn(
+    String username,
+    String password, {
+    String? code,
+  }) => run(() async {
     if (!await _authenticateDevice()) {
       throw StateError('No se desbloqueó el dispositivo');
     }
     final initialGeneration = _generation;
+    unawaited(retryRemoteLogout());
     final response = await api.post(
       '${ApiConfig.baseUrl}/api/authenticate',
-      data: {'username': username.trim(), 'password': password},
+      data: {
+        'username': username.trim(),
+        'password': password,
+        if (code != null && code.isNotEmpty) 'code': code.trim(),
+      },
     );
     _requireGeneration(initialGeneration);
     final token = accessToken(response.data);
@@ -365,9 +416,9 @@ class FieldSession extends ChangeNotifier {
     if (response.data['refresh_token'] is String) {
       credentials!['refresh_token'] = response.data['refresh_token'];
     }
-    onlineOnly = profile != 'secure-mobile-v1';
+    onlineOnly = apiProfile != 'secure-mobile-v1';
     if (onlineOnly) {
-      if (!isAdmin) {
+      if (!canWork || (!secureField && !isAdmin)) {
         throw StateError(
           'El contrato publicado requiere administrador para preparar personas.',
         );
@@ -382,11 +433,14 @@ class FieldSession extends ChangeNotifier {
         throw StateError('La sesión cambió.');
       }
       store = opened;
+      await quarantineLegacyDatabase();
+      _requireGeneration(generation);
       credentials!['offlineUntil'] = DateTime.now()
           .toUtc()
           .add(const Duration(hours: 12))
           .toIso8601String();
       credentials!['offlineIssued'] = DateTime.now().toUtc().toIso8601String();
+      if (secureField) await _renewPermit();
       await store!.setMeta(
         'lastSeen',
         DateTime.now().toUtc().toIso8601String(),
@@ -437,7 +491,7 @@ class FieldSession extends ChangeNotifier {
   });
 
   Future<void> unlock() => run(() async {
-    if (profile != 'secure-mobile-v1') {
+    if (apiProfile != 'secure-mobile-v1') {
       if (!await _authenticateDevice()) return;
       final generation = _generation;
       final raw = await secureSession.read(key: _publishedSessionKey);
@@ -448,7 +502,9 @@ class FieldSession extends ChangeNotifier {
         );
       }
       final saved = Map<String, dynamic>.from(jsonDecode(raw));
-      if (!(saved['authorities'] as List).contains('ROLE_ADMIN')) {
+      if (!(saved['authorities'] as List).any(
+        (r) => r == 'ROLE_ADMIN' || (secureField && r == 'ROLE_OPERATOR'),
+      )) {
         throw StateError('Acceso no permitido.');
       }
       final opened = await FieldStore.open(
@@ -522,12 +578,12 @@ class FieldSession extends ChangeNotifier {
     }
     final generation = _generation;
     final last = await current.meta('lastSeen');
-    if (onlineOnly) {
+    if (onlineOnly && (!secureField || session['permit'] == null)) {
       final now = DateTime.now().toUtc();
       final expires = DateTime.tryParse('${session['offlineUntil']}');
       final issued = DateTime.tryParse('${session['offlineIssued']}');
       final seen = DateTime.tryParse(last ?? '');
-      if (!isAdmin ||
+      if (!canWork ||
           expires == null ||
           issued == null ||
           !now.isBefore(expires) ||
@@ -546,7 +602,7 @@ class FieldSession extends ChangeNotifier {
     }
     final permit = await OfflinePermit.verify(
       token: session['permit'] ?? '',
-      publicKey: publicKey,
+      publicKey: verificationKey,
       accountId: session['id'],
       installationId: _installation,
       now: DateTime.now().toUtc(),
@@ -571,7 +627,10 @@ class FieldSession extends ChangeNotifier {
     }
     credentials!['id_token'] = token;
     credentials!['refresh_token'] = refresh;
-    await secureSession.write(key: _sessionKey, value: jsonEncode(credentials));
+    await secureSession.write(
+      key: _activeSessionKey,
+      value: jsonEncode(credentials),
+    );
   }
 
   Future<void> verifyOnlineSession() async {
@@ -583,7 +642,9 @@ class FieldSession extends ChangeNotifier {
       );
       _requireGeneration(generation);
       if (account.id != credentials?['id'] ||
-          !account.roles.contains('ROLE_ADMIN')) {
+          !account.roles.any(
+            (r) => r == 'ROLE_ADMIN' || (secureField && r == 'ROLE_OPERATOR'),
+          )) {
         await _invalidate();
         return;
       }
@@ -629,7 +690,6 @@ class FieldSession extends ChangeNotifier {
     } on DioException catch (e) {
       _requireGeneration(generation);
       if (e.response?.statusCode != 401 ||
-          onlineOnly ||
           credentials?['refresh_token'] == null) {
         rethrow;
       }
@@ -688,6 +748,59 @@ class FieldSession extends ChangeNotifier {
   }
 
   Future<void> _preparePublished() async {
+    if (secureField) {
+      await _renewPermit();
+      final generation = _generation;
+      final rows = <Map<String, dynamic>>[];
+      final seen = <int>{};
+      int? cursor = 0;
+      do {
+        final response = await _request(
+          'GET',
+          '/api/mobile/bootstrap?after=$cursor',
+        );
+        _requireGeneration(generation);
+        for (final value in response.data['people'] as List) {
+          final person = preparedPerson(value)..['referencePrepared'] = true;
+          if (!seen.add(person['id'])) {
+            throw const FormatException('Persona repetida.');
+          }
+          rows.add(person);
+        }
+        final next = response.data['next'] as int?;
+        if (next != null && next <= cursor!) {
+          throw const FormatException('Paginación inválida.');
+        }
+        cursor = next;
+      } while (cursor != null);
+      final tariff = (await _request('GET', '/api/mobile/tariff')).data;
+      _requireGeneration(generation);
+      if (tariff is Map) {
+        await store!.setMeta(
+          'billingPrices',
+          jsonEncode({
+            'rate': tariff['rate'],
+            'fixedCharge': tariff['fixedCharge'],
+            'tariffId': tariff['id'],
+          }),
+        );
+      }
+      final previous = await store!.people();
+      await store!.withdrawPeople(
+        previous
+            .map((p) => p['id'] as int)
+            .where((id) => !seen.contains(id))
+            .toList(),
+      );
+      await store!.replacePeople(rows);
+      await secureSession.write(
+        key: _activeSessionKey,
+        value: jsonEncode(credentials),
+      );
+      await reload();
+      status = 'Jornada preparada: lecturas y tarifa disponibles sin internet.';
+      return;
+    }
     if (!isAdmin) {
       throw StateError(
         'La API publicada no documenta asignaciones de operadores. No se descargará el listado global.',
@@ -802,7 +915,7 @@ class FieldSession extends ChangeNotifier {
   });
 
   Future<List<Map<String, dynamic>>> readingHistory(int personId) async {
-    if (locked || !isAdmin || !people.any((p) => p['id'] == personId)) {
+    if (locked || !canWork || !people.any((p) => p['id'] == personId)) {
       throw StateError('Persona no disponible en esta sesión.');
     }
     final response = await _request('GET', '/api/meters/by-person/$personId');
@@ -834,51 +947,132 @@ class FieldSession extends ChangeNotifier {
       : _syncing ??= (onlineOnly ? _synchronizePublished() : _synchronize())
             .whenComplete(() => _syncing = null);
 
+  Future<void> purgeConfirmedCopies() => run(() async {
+    final current = store;
+    if (locked || current == null) throw StateError('Desbloquea tu jornada.');
+    final generation = _generation;
+    final account = FieldAccount.parse(
+      (await _request('GET', '/api/account')).data,
+    );
+    _requireGeneration(generation);
+    if (account.id != credentials?['id']) throw StateError('La sesión cambió.');
+    final removed = await current.purgeConfirmedCopies(DateTime.now().toUtc());
+    _requireGeneration(generation);
+    await reload();
+    status =
+        '$removed copias confirmadas de más de 90 días retiradas de esta tablet. Las lecturas pendientes se conservan; las facturas siguen en Historial.';
+  });
+
   Future<void> _synchronizePublished() async {
     final current = store;
     if (locked || current == null) return;
     final generation = _generation;
     try {
-      await checkAccess();
       // A successful account call is required immediately before sending.
       final account = FieldAccount.parse(
         (await _request('GET', '/api/account')).data,
       );
       if (account.id != credentials?['id'] ||
-          !account.roles.contains('ROLE_ADMIN')) {
+          !account.roles.any(
+            (r) => r == 'ROLE_ADMIN' || (secureField && r == 'ROLE_OPERATOR'),
+          )) {
         await _invalidate();
         return;
       }
-      await PublishedOutbox(
-        request: _request,
-        load: current.operations,
-        ensureActive: () {
+      credentials!['authorities'] = account.roles;
+      if (secureField) {
+        await _renewPermit();
+        final ids = (await current.people())
+            .map((p) => p['id'] as int)
+            .toList();
+        for (var offset = 0; offset < ids.length; offset += 100) {
+          final batch = ids.sublist(offset, min(offset + 100, ids.length));
+          final response = await _request(
+            'POST',
+            '/api/mobile/access/check',
+            data: {'personIds': batch},
+          );
           _requireGeneration(generation);
-          if (locked) throw StateError('Sesión bloqueada');
-        },
-        update: (id, state, message) async {
-          final count = await current.db.update(
-            'outbox',
-            {'status': state, 'error': message},
-            where: state == 'sending' ? 'id = ? AND status = ?' : 'id = ?',
-            whereArgs: state == 'sending' ? [id, 'pending'] : [id],
-          );
-          if (state == 'sending' && count != 1) {
-            throw StateError(
-              'El registro fue cancelado o cambió antes del envío.',
-            );
+          final allowed = (response.data['allowedIds'] as List)
+              .cast<int>()
+              .toSet();
+          if (allowed.any((id) => !batch.contains(id))) {
+            throw const FormatException('Respuesta de permisos inválida.');
           }
-        },
-        acknowledge: current.acknowledge,
-        rememberInvoice: (id, result) async {
-          await current.db.update(
-            'outbox',
-            {'result': jsonEncode(result)},
-            where: 'id = ?',
-            whereArgs: [id],
+          await current.withdrawPeople(
+            batch.where((id) => !allowed.contains(id)).toList(),
           );
-        },
-      ).sync();
+        }
+        await secureSession.write(
+          key: _activeSessionKey,
+          value: jsonEncode(credentials),
+        );
+        await SecureFieldOutbox(
+          request: _request,
+          load: current.operations,
+          ensureActive: () {
+            _requireGeneration(generation);
+            if (locked) throw StateError('Sesión bloqueada.');
+          },
+          claim: (id) async =>
+              await current.db.rawUpdate(
+                'UPDATE outbox SET status = ?, transport = ? WHERE id = ? AND (status = ? OR (transport = ? AND status IN (?, ?, ?, ?)))',
+                [
+                  'sending',
+                  'field-v2',
+                  id,
+                  'pending',
+                  'field-v2',
+                  'sending',
+                  'retry',
+                  'uncertain',
+                  'session',
+                ],
+              ) ==
+              1,
+          update: (id, state, message) async {
+            await current.db.update(
+              'outbox',
+              {'status': state, 'error': message},
+              where: 'id = ?',
+              whereArgs: [id],
+            );
+          },
+          acknowledge: current.acknowledge,
+        ).sync();
+      } else {
+        await checkAccess();
+        await PublishedOutbox(
+          request: _request,
+          load: current.operations,
+          ensureActive: () {
+            _requireGeneration(generation);
+            if (locked) throw StateError('Sesión bloqueada');
+          },
+          update: (id, state, message) async {
+            final count = await current.db.update(
+              'outbox',
+              {'status': state, 'error': message},
+              where: state == 'sending' ? 'id = ? AND status = ?' : 'id = ?',
+              whereArgs: state == 'sending' ? [id, 'pending'] : [id],
+            );
+            if (state == 'sending' && count != 1) {
+              throw StateError(
+                'El registro fue cancelado o cambió antes del envío.',
+              );
+            }
+          },
+          acknowledge: current.acknowledge,
+          rememberInvoice: (id, result) async {
+            await current.db.update(
+              'outbox',
+              {'result': jsonEncode(result)},
+              where: 'id = ?',
+              whereArgs: [id],
+            );
+          },
+        ).sync();
+      }
       _requireGeneration(generation);
       await reload();
       final confirmed = operations
@@ -1141,6 +1335,7 @@ class FieldSession extends ChangeNotifier {
     preparedAt = nextPrepared;
     defaultRate = (pricing?['rate'] as num?)?.toDouble();
     defaultFixedCharge = (pricing?['fixedCharge'] as num?)?.toDouble();
+    tariffId = pricing?['tariffId'] as String?;
     notifyListeners();
   }
 
@@ -1170,6 +1365,7 @@ class FieldSession extends ChangeNotifier {
     preparedAt = null;
     credentials = null;
     defaultRate = defaultFixedCharge = null;
+    tariffId = null;
     permitExpires = null;
     await closing?.close();
   }
@@ -1188,27 +1384,65 @@ class FieldSession extends ChangeNotifier {
     await secureSession.delete(key: key);
   }
 
+  Future<bool> retryRemoteLogout() async {
+    try {
+      final raw = await secureSession.read(key: _revocationsKey);
+      if (raw == null) return true;
+      final tokens = (jsonDecode(raw) as List).cast<String>();
+      for (final refresh in tokens) {
+        await api.post(
+          '${ApiConfig.baseUrl}/api/session/logout',
+          data: {'refresh_token': refresh},
+        );
+      }
+      // Never remove a revocation appended while this request was running.
+      if (await secureSession.read(key: _revocationsKey) == raw) {
+        await secureSession.delete(key: _revocationsKey);
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> logout() => run(() async {
+    final refresh = credentials?['refresh_token'];
     final token = credentials?['id_token'];
-    final revoke = !onlineOnly;
+    final sessionKey = _activeSessionKey;
     await lock();
-    await secureSession.delete(
-      key: onlineOnly ? _publishedSessionKey : _sessionKey,
-    );
     hasSavedSession = false;
     try {
-      if (revoke && token is String) {
+      if (refresh is String) {
+        final raw = await secureSession.read(key: _revocationsKey);
+        final pending = raw == null
+            ? <String>[]
+            : (jsonDecode(raw) as List).cast<String>();
+        if (!pending.contains(refresh)) pending.add(refresh);
+        await secureSession.write(
+          key: _revocationsKey,
+          value: jsonEncode(pending),
+        );
+      }
+    } finally {
+      await secureSession.delete(key: sessionKey);
+    }
+    var revoked = false;
+    if (refresh is String) {
+      revoked = await retryRemoteLogout();
+    } else if (token is String) {
+      try {
         await api.post(
           '${ApiConfig.baseUrl}/api/session/logout',
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
+        revoked = true;
+      } catch (_) {
+        /* Older sessions may have no refresh token. */
       }
-    } catch (_) {
-      /* Local lock does not wait for remote revocation. */
     }
-    status = revoke
-        ? 'Sesión cerrada. Los pendientes permanecen cifrados.'
-        : 'Sesión cerrada en este dispositivo. La API no ofrece revocación remota.';
+    status = revoked
+        ? 'Sesión cerrada. Las lecturas pendientes permanecen cifradas.'
+        : 'Datos bloqueados en la tablet. Cierre remoto pendiente de conexión; las lecturas se conservan.';
   });
   Future<void> run(Future<void> Function() task) async {
     if (busy) {

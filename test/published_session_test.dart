@@ -29,7 +29,7 @@ ResponseBody jsonResponse(Object value, [int status = 200]) =>
     );
 
 FieldSession fixture(Future<ResponseBody> Function(RequestOptions) response) {
-  final session = FieldSession()
+  final session = FieldSession(apiProfile: 'published')
     ..onlineOnly = true
     ..locked = false
     ..credentials = {
