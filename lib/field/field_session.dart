@@ -67,6 +67,34 @@ class FieldSession extends ChangeNotifier {
   bool get canAssign => (!onlineOnly || secureField) && isAdmin;
   int get pending =>
       operations.where((o) => isPendingOperation(o['status'])).length;
+
+  Future<dynamic> routeRequest(
+    String method,
+    String path, {
+    dynamic data,
+  }) async {
+    if (locked || !isAdmin) {
+      throw StateError('Solo administradores pueden gestionar recorridos.');
+    }
+    if (!(path.startsWith('/api/admin/routes/') ||
+        (method == 'GET' && path.startsWith('/api/people?')))) {
+      throw StateError('Solicitud de recorridos inválida.');
+    }
+    final response = await _request(method, path, data: data);
+    if (locked || !isAdmin) {
+      throw StateError('La sesión ya no está disponible.');
+    }
+    if (path.startsWith('/api/people?')) {
+      return {
+        'items': response.data,
+        'total':
+            int.tryParse(response.headers.value('x-total-count') ?? '') ??
+            (response.data as List).length,
+      };
+    }
+    return response.data;
+  }
+
   List<Map<String, Object?>> get pendingOperations =>
       operations.where((o) => isPendingOperation(o['status'])).toList();
 

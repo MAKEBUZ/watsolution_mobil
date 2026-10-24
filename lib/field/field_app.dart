@@ -8,6 +8,7 @@ import 'dashboard_header.dart';
 import 'field_theme.dart';
 export 'field_theme.dart' show fieldTheme;
 import 'pricing_screen.dart';
+import 'routes_screen.dart';
 import 'operation_policy.dart';
 import 'work_screens.dart';
 import 'local_invoice_pdf.dart';
@@ -988,6 +989,21 @@ class _FieldAppState extends State<FieldApp> with WidgetsBindingObserver {
   Widget _settings(BuildContext context) => ListView(
     padding: const EdgeInsets.all(20),
     children: [
+      if (session.isAdmin)
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.route),
+            title: const Text('Mapa y recorridos'),
+            subtitle: const Text(
+              'Viviendas y rutas de lectura · Solo administradores',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => RoutesScreen(session: session)),
+            ),
+          ),
+        ),
       if (session.store != null)
         Card(
           child: Padding(
